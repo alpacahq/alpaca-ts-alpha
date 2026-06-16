@@ -40,11 +40,36 @@ function headerValue(init: RequestInit | undefined, name: string): string | unde
     return key ? (h as Record<string, string>)[key] : undefined;
 }
 
+/** Snapshot + clear the Alpaca credential env vars so the host environment can't leak in. */
+function withCleanEnv() {
+    const names = ['APCA_API_KEY_ID', 'APCA_API_SECRET_KEY', 'APCA_API_OAUTH_TOKEN'];
+    const saved: Record<string, string | undefined> = {};
+    for (const n of names) {
+        saved[n] = process.env[n];
+        delete process.env[n];
+    }
+    return () => {
+        for (const n of names) {
+            if (saved[n] === undefined) delete process.env[n];
+            else process.env[n] = saved[n];
+        }
+    };
+}
+
 describe('Alpaca client construction', () => {
+    let restoreEnv: () => void;
+    afterEach(() => restoreEnv?.());
+
     it('throws when credentials are missing', () => {
-        expect(() => new Alpaca({} as never)).toThrow(/keyId.*secret/i);
-        expect(() => new Alpaca({ keyId: 'x' } as never)).toThrow(/keyId.*secret/i);
-        expect(() => new Alpaca({ secret: 'y' } as never)).toThrow(/keyId.*secret/i);
+        restoreEnv = withCleanEnv();
+        expect(() => new Alpaca({})).toThrow(/accessToken|keyId/i);
+        expect(() => new Alpaca({ keyId: 'x' })).toThrow(/keyId.*secret/i);
+        expect(() => new Alpaca({ secret: 'y' })).toThrow(/keyId.*secret/i);
+    });
+
+    it('accepts an OAuth accessToken without keyId/secret', () => {
+        restoreEnv = withCleanEnv();
+        expect(() => new Alpaca({ accessToken: 'tok-123' })).not.toThrow();
     });
 
     it('defaults to the paper environment', () => {
@@ -64,6 +89,61 @@ describe('Alpaca client construction', () => {
     it('exposes `data` as an alias of `marketData`', () => {
         const alpaca = new Alpaca({ ...CREDS });
         expect(alpaca.data).toBe(alpaca.marketData);
+    });
+});
+
+describe('Credential resolution (env + OAuth)', () => {
+    let restoreEnv: () => void;
+    afterEach(() => restoreEnv?.());
+
+    it('falls back to APCA_API_KEY_ID / APCA_API_SECRET_KEY env vars', async () => {
+        restoreEnv = withCleanEnv();
+        process.env.APCA_API_KEY_ID = 'AKENV';
+        process.env.APCA_API_SECRET_KEY = 'env-secret';
+        const { calls, fetchApi } = capturingFetch();
+        const alpaca = new Alpaca({ fetchApi });
+        await alpaca.trading.account.getAccount();
+        expect(headerValue(calls[0].init, 'APCA-API-KEY-ID')).toBe('AKENV');
+        expect(headerValue(calls[0].init, 'APCA-API-SECRET-KEY')).toBe('env-secret');
+    });
+
+    it('lets explicit credentials win over the environment', async () => {
+        restoreEnv = withCleanEnv();
+        process.env.APCA_API_KEY_ID = 'AKENV';
+        process.env.APCA_API_SECRET_KEY = 'env-secret';
+        const { calls, fetchApi } = capturingFetch();
+        const alpaca = new Alpaca({ ...CREDS, fetchApi });
+        await alpaca.trading.account.getAccount();
+        expect(headerValue(calls[0].init, 'APCA-API-KEY-ID')).toBe(CREDS.keyId);
+    });
+
+    it('sends an Authorization: Bearer header for an OAuth accessToken', async () => {
+        restoreEnv = withCleanEnv();
+        const { calls, fetchApi } = capturingFetch();
+        const alpaca = new Alpaca({ accessToken: 'tok-abc', fetchApi });
+        await alpaca.trading.account.getAccount();
+        expect(headerValue(calls[0].init, 'Authorization')).toBe('Bearer tok-abc');
+        // OAuth is mutually exclusive with key/secret: no key headers are sent.
+        expect(headerValue(calls[0].init, 'APCA-API-KEY-ID')).toBeUndefined();
+        expect(headerValue(calls[0].init, 'APCA-API-SECRET-KEY')).toBeUndefined();
+    });
+
+    it('falls back to the APCA_API_OAUTH_TOKEN env var', async () => {
+        restoreEnv = withCleanEnv();
+        process.env.APCA_API_OAUTH_TOKEN = 'env-tok';
+        const { calls, fetchApi } = capturingFetch();
+        const alpaca = new Alpaca({ fetchApi });
+        await alpaca.marketData.stocks.stockMetaExchanges();
+        expect(headerValue(calls[0].init, 'Authorization')).toBe('Bearer env-tok');
+    });
+
+    it('prefers OAuth over key/secret when both are provided', async () => {
+        restoreEnv = withCleanEnv();
+        const { calls, fetchApi } = capturingFetch();
+        const alpaca = new Alpaca({ ...CREDS, accessToken: 'tok-win', fetchApi });
+        await alpaca.trading.account.getAccount();
+        expect(headerValue(calls[0].init, 'Authorization')).toBe('Bearer tok-win');
+        expect(headerValue(calls[0].init, 'APCA-API-KEY-ID')).toBeUndefined();
     });
 });
 

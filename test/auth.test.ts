@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, afterEach } from 'vitest';
 
 import * as trading from '../src/trading';
 import * as marketData from '../src/market-data';
@@ -30,6 +30,68 @@ function headerValue(init: RequestInit | undefined, name: string): string | unde
     const key = Object.keys(h).find((k) => k.toLowerCase() === name.toLowerCase());
     return key ? (h as Record<string, string>)[key] : undefined;
 }
+
+/** Snapshot + clear the Alpaca credential env vars so the host environment can't leak in. */
+function withCleanEnv() {
+    const names = [auth.API_KEY_ID_ENV, auth.API_SECRET_KEY_ENV, auth.OAUTH_TOKEN_ENV];
+    const saved: Record<string, string | undefined> = {};
+    for (const n of names) {
+        saved[n] = process.env[n];
+        delete process.env[n];
+    }
+    return () => {
+        for (const n of names) {
+            if (saved[n] === undefined) delete process.env[n];
+            else process.env[n] = saved[n];
+        }
+    };
+}
+
+describe('auth.resolveCredentials', () => {
+    let restoreEnv: () => void;
+    afterEach(() => restoreEnv?.());
+
+    it('returns the key/secret pair when both are passed', () => {
+        restoreEnv = withCleanEnv();
+        expect(auth.resolveCredentials({ keyId: KEY_ID, secret: SECRET })).toEqual({ keyId: KEY_ID, secret: SECRET });
+    });
+
+    it('returns the access token when passed (no key/secret)', () => {
+        restoreEnv = withCleanEnv();
+        expect(auth.resolveCredentials({ accessToken: 'tok' })).toEqual({ accessToken: 'tok' });
+    });
+
+    it('prefers OAuth and ignores key/secret when both are provided', () => {
+        restoreEnv = withCleanEnv();
+        expect(auth.resolveCredentials({ keyId: KEY_ID, secret: SECRET, accessToken: 'tok' })).toEqual({ accessToken: 'tok' });
+    });
+
+    it('falls back to key/secret env vars', () => {
+        restoreEnv = withCleanEnv();
+        process.env[auth.API_KEY_ID_ENV] = 'AKENV';
+        process.env[auth.API_SECRET_KEY_ENV] = 'env-secret';
+        expect(auth.resolveCredentials()).toEqual({ keyId: 'AKENV', secret: 'env-secret' });
+    });
+
+    it('falls back to the OAuth token env var', () => {
+        restoreEnv = withCleanEnv();
+        process.env[auth.OAUTH_TOKEN_ENV] = 'env-tok';
+        expect(auth.resolveCredentials()).toEqual({ accessToken: 'env-tok' });
+    });
+
+    it('lets explicit options win over env vars', () => {
+        restoreEnv = withCleanEnv();
+        process.env[auth.API_KEY_ID_ENV] = 'AKENV';
+        process.env[auth.API_SECRET_KEY_ENV] = 'env-secret';
+        expect(auth.resolveCredentials({ keyId: KEY_ID, secret: SECRET })).toEqual({ keyId: KEY_ID, secret: SECRET });
+    });
+
+    it('throws when neither scheme can be resolved', () => {
+        restoreEnv = withCleanEnv();
+        expect(() => auth.resolveCredentials()).toThrow(/accessToken|keyId/i);
+        expect(() => auth.resolveCredentials({ keyId: KEY_ID })).toThrow(/keyId.*secret/i);
+    });
+});
 
 describe('auth.apiKeyAuth helper', () => {
     it('resolves each Alpaca header to the matching credential', () => {
@@ -93,5 +155,19 @@ describe('[trading] credentials reach the wire', () => {
         await new trading.AccountsApi(config).getAccount();
         expect(headerValue(seen, 'APCA-API-KEY-ID')).toBe(KEY_ID);
         expect(headerValue(seen, 'APCA-API-SECRET-KEY')).toBe(SECRET);
+    });
+
+    it('attaches an Authorization: Bearer header when an accessToken is configured', async () => {
+        let seen: RequestInit | undefined;
+        const config = new trading.Configuration({
+            accessToken: 'tok-xyz',
+            fetchApi: async (_url, init) => {
+                seen = init;
+                return new Response('{}', { status: 200, headers: { 'Content-Type': 'application/json' } });
+            },
+        });
+        await new trading.AccountsApi(config).getAccount();
+        expect(headerValue(seen, 'Authorization')).toBe('Bearer tok-xyz');
+        expect(headerValue(seen, 'APCA-API-KEY-ID')).toBeUndefined();
     });
 });

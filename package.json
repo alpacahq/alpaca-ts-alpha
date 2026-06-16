@@ -12,8 +12,12 @@
   "types": "./dist/index.d.ts",
   "typesVersions": {
     "*": {
-      "rest": ["./dist/rest.d.ts"],
-      "testing": ["./dist/testing.d.ts"]
+      "rest": [
+        "./dist/rest.d.ts"
+      ],
+      "testing": [
+        "./dist/testing.d.ts"
+      ]
     }
   },
   "exports": {
@@ -62,6 +66,7 @@
     "test": "vitest run",
     "lint": "biome lint .",
     "lint:fix": "biome lint --write .",
+    "docs:api": "tsx scripts/gen-api-reference.ts",
     "prepare": "npm run build"
   },
   "dependencies": {
@@ -77,6 +82,7 @@
     "@types/node": "^22.0.0",
     "@types/ws": "^8.18.1",
     "tsup": "^8.5.1",
+    "tsx": "^4.22.4",
     "typescript": "^5.4.0",
     "vitest": "^4.1.8"
   }

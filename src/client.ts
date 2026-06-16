@@ -34,7 +34,8 @@
  * bars.connect();
  * ```
  */
-import type { AlpacaCredentials } from "./auth";
+import type { AlpacaCredentials, ResolvedCredentials } from "./auth";
+import { resolveCredentials } from "./auth";
 import * as trading from "./trading";
 import * as marketData from "./market-data";
 // `streaming` is imported for TYPES ONLY (erased at build time) so the REST
@@ -56,11 +57,28 @@ import * as marketDataShapes from "./marketDataShapes";
 export const LIVE_TRADING_BASE_PATH = trading.TRADING_LIVE_HOST;
 
 /**
- * Options accepted by the top-level {@link Alpaca} client. Credentials are
- * required; every other field is an optional passthrough shared by both the
- * trading and market-data REST configurations.
+ * Options accepted by the top-level {@link Alpaca} client.
+ *
+ * Provide credentials as either an API `keyId`/`secret` pair or an OAuth
+ * `accessToken`. Any of them may be omitted and resolved from the standard
+ * Alpaca environment variables (`APCA_API_KEY_ID`, `APCA_API_SECRET_KEY`,
+ * `APCA_API_OAUTH_TOKEN`); explicit values win. Every other field is an
+ * optional passthrough shared by both the trading and market-data REST
+ * configurations.
  */
-export interface AlpacaClientOptions extends AlpacaCredentials {
+export interface AlpacaClientOptions {
+    /** API key id, or set `APCA_API_KEY_ID`. Pair with {@link secret}. */
+    keyId?: string;
+    /** API secret, or set `APCA_API_SECRET_KEY`. Pair with {@link keyId}. */
+    secret?: string;
+    /**
+     * OAuth2 access token sent as `Authorization: Bearer <token>` (or set
+     * `APCA_API_OAUTH_TOKEN`). Mutually exclusive with {@link keyId}/{@link secret}
+     * and takes precedence over them for REST requests. Note: the real-time
+     * streaming endpoints authenticate with a key/secret pair, so OAuth-only
+     * clients cannot open WebSocket streams.
+     */
+    accessToken?: string;
     /**
      * Use the paper-trading environment. Defaults to `true`.
      *
@@ -98,6 +116,7 @@ type SharedRestConfig = Pick<
     trading.ConfigurationParameters,
     | "keyId"
     | "secret"
+    | "accessToken"
     | "timeoutMs"
     | "retry"
     | "rateLimit"
@@ -119,10 +138,13 @@ export const DEFAULT_RATE_LIMIT: trading.RateLimitConfig = {
     intervalMs: 60_000,
 };
 
-function sharedRestConfig(options: AlpacaClientOptions): SharedRestConfig {
+function sharedRestConfig(options: AlpacaClientOptions, creds: ResolvedCredentials): SharedRestConfig {
     return {
-        keyId: options.keyId,
-        secret: options.secret,
+        // Resolved (env-fallback + OAuth precedence): exactly one scheme is set,
+        // so we never send both the key headers and a bearer token.
+        keyId: creds.keyId,
+        secret: creds.secret,
+        accessToken: creds.accessToken,
         timeoutMs: options.timeoutMs,
         retry: options.retry,
         // Default-on, but `rateLimit: false` opts out and an explicit config tunes it.
@@ -287,10 +309,13 @@ export class TradingClient {
     private _watchlists?: trading.WatchlistsApi;
 
     constructor(options: AlpacaClientOptions) {
-        this.credentials = { keyId: options.keyId, secret: options.secret };
+        const creds = resolveCredentials(options);
+        // Streaming authenticates with a key/secret pair; OAuth-only clients
+        // resolve to empty values here and cannot open streams.
+        this.credentials = { keyId: creds.keyId ?? "", secret: creds.secret ?? "" };
         this.paper = options.paper ?? true;
         this.config = new trading.Configuration({
-            ...sharedRestConfig(options),
+            ...sharedRestConfig(options, creds),
             paper: this.paper,
         });
     }
@@ -646,8 +671,11 @@ export class MarketDataClient {
     private _corporateActions?: marketData.CorporateActionsApi;
 
     constructor(options: AlpacaClientOptions) {
-        this.credentials = { keyId: options.keyId, secret: options.secret };
-        this.config = new marketData.Configuration(sharedRestConfig(options));
+        const creds = resolveCredentials(options);
+        // Streaming authenticates with a key/secret pair; OAuth-only clients
+        // resolve to empty values here and cannot open streams.
+        this.credentials = { keyId: creds.keyId ?? "", secret: creds.secret ?? "" };
+        this.config = new marketData.Configuration(sharedRestConfig(options, creds));
     }
 
     get stocks(): marketData.StockApi {
@@ -1112,13 +1140,11 @@ export class Alpaca {
     private _marketData?: MarketDataClient;
     private readonly options: AlpacaClientOptions;
 
-    constructor(options: AlpacaClientOptions) {
-        if (!options?.keyId || !options?.secret) {
-            throw new Error(
-                "Alpaca requires both `keyId` and `secret`. " +
-                "Construct the client as `new Alpaca({ keyId, secret, paper })`.",
-            );
-        }
+    constructor(options: AlpacaClientOptions = {}) {
+        // Validate eagerly so a misconfigured client fails at construction
+        // rather than on the first request. Resolves env-var fallbacks and the
+        // OAuth-or-key/secret requirement; the sub-clients re-resolve lazily.
+        resolveCredentials(options);
         this.options = options;
     }
 

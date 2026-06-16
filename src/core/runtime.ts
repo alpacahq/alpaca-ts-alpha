@@ -319,6 +319,20 @@ export class BaseAPI {
             defaultHeaders['User-Agent'] = userAgent;
         }
         const headers = Object.assign(defaultHeaders, this.configuration.headers, context.headers);
+
+        // OAuth2 bearer auth. The generated operations only ever wire Alpaca's
+        // `APCA-API-KEY-ID` / `APCA-API-SECRET-KEY` headers (the spec declares
+        // apiKey security), so when an `accessToken` is configured we attach the
+        // Authorization header here at the transport layer. An explicit
+        // Authorization header (from config or the operation) still wins.
+        const accessToken = this.configuration.accessToken;
+        if (accessToken && headers.Authorization === undefined && headers.authorization === undefined) {
+            const token = await accessToken();
+            if (token) {
+                headers.Authorization = `Bearer ${token}`;
+            }
+        }
+
         Object.keys(headers).forEach(key => headers[key] === undefined ? delete headers[key] : {});
 
         const initOverrideFn =

@@ -111,6 +111,35 @@ Alpaca authenticates with two distinct headers (`APCA-API-KEY-ID` and
 const alpaca = new Alpaca({ keyId, secret });
 ```
 
+### Environment variables
+
+Any credential may be omitted and resolved from the standard Alpaca environment
+variables; explicitly-passed values always win.
+
+| Option        | Environment variable    |
+| ------------- | ----------------------- |
+| `keyId`       | `APCA_API_KEY_ID`       |
+| `secret`      | `APCA_API_SECRET_KEY`   |
+| `accessToken` | `APCA_API_OAUTH_TOKEN`  |
+
+```ts
+// With APCA_API_KEY_ID and APCA_API_SECRET_KEY set in the environment:
+const alpaca = new Alpaca();
+```
+
+### OAuth
+
+Pass an `accessToken` to authenticate via OAuth2; it is sent as
+`Authorization: Bearer <token>`. OAuth is mutually exclusive with `keyId`/`secret`
+and takes precedence over them.
+
+```ts
+const alpaca = new Alpaca({ accessToken });
+```
+
+> Real-time streaming authenticates with a key/secret pair, so OAuth-only
+> clients cannot open WebSocket streams.
+
 > Do **not** pass `apiKey` as a plain string — it would send the same value for
 > both headers and Alpaca would reject it. The SDK throws a guided error if you
 > try. To compute credentials lazily (e.g. from a vault), use the helper:
@@ -474,6 +503,9 @@ findErgonomic("getStockBars");
 // [{ accessor: "marketData", kind: "normalized", ... }]
 ```
 
+For the full, per-method listing of both layers (description + example for every
+method), see the generated [API reference](#api-reference) below.
+
 ## Observability
 
 Built-in middleware for logging and metrics, layered on the transport's
@@ -586,4 +618,1580 @@ npm test         # vitest
   as the `trading` and `marketData` namespaces of a single package. This avoids
   collisions between the two specs, which both define a `CorporateActionsApi`
   and overlapping model names.
+
+## API reference
+
+Every method on the facade — all generated REST methods, the real-time streaming
+factories, and the ergonomic helpers — with a one-line description and a short
+example. This section is **generated** from [`src/capabilities.ts`](src/capabilities.ts)
+plus a hand-maintained examples map; run `npm run docs:api` to regenerate it (a
+test fails the build if it drifts out of sync). Headings are the real facade call
+paths, so every entry is individually anchor-linkable.
+
+<!-- API-REFERENCE:START -->
+
+### Trading API
+
+#### `alpaca.trading.account` — AccountsApi
+
+Account details, balances, buying power and status.
+
+##### `alpaca.trading.account.getAccount`
+
+Account details, balances, buying power and status.
+
+```ts
+await alpaca.trading.account.getAccount();
+```
+
+#### `alpaca.trading.accountActivities` — AccountActivitiesApi
+
+Account activity history (fills, fees, dividends, transfers).
+
+##### `alpaca.trading.accountActivities.getAccountActivities`
+
+List account activities (fills, fees, dividends, transfers), newest first.
+
+```ts
+await alpaca.trading.accountActivities.getAccountActivities({ activityTypes: ["FILL"], pageSize: 50 });
+```
+
+##### `alpaca.trading.accountActivities.getAccountActivitiesByActivityType`
+
+List activities of a single type (e.g. only fills).
+
+```ts
+await alpaca.trading.accountActivities.getAccountActivitiesByActivityType({ activityType: "FILL" });
+```
+
+#### `alpaca.trading.accountConfigurations` — AccountConfigurationsApi
+
+Read and update trading account configuration.
+
+##### `alpaca.trading.accountConfigurations.getAccountConfig`
+
+Read the account's trading configuration.
+
+```ts
+await alpaca.trading.accountConfigurations.getAccountConfig();
+```
+
+##### `alpaca.trading.accountConfigurations.patchAccountConfig`
+
+Update trading configuration (e.g. block short selling).
+
+```ts
+await alpaca.trading.accountConfigurations.patchAccountConfig({ accountConfigurations: { noShorting: true } });
+```
+
+#### `alpaca.trading.assets` — AssetsApi
+
+Tradable assets, option contracts and instrument reference data.
+
+##### `alpaca.trading.assets.getV2Assets`
+
+List tradable assets, filterable by class, status and exchange.
+
+```ts
+await alpaca.trading.assets.getV2Assets({ status: "active", assetClass: "us_equity" });
+```
+
+##### `alpaca.trading.assets.getV2AssetsSymbolOrAssetId`
+
+Fetch a single asset by symbol or asset id.
+
+```ts
+await alpaca.trading.assets.getV2AssetsSymbolOrAssetId({ symbolOrAssetId: "AAPL" });
+```
+
+##### `alpaca.trading.assets.getOptionsContracts`
+
+List option contracts for underlying symbols (paginated).
+
+```ts
+await alpaca.trading.assets.getOptionsContracts({ underlyingSymbols: "AAPL", limit: 100 });
+```
+
+##### `alpaca.trading.assets.getOptionContractSymbolOrId`
+
+Fetch a single option contract by symbol or id.
+
+```ts
+await alpaca.trading.assets.getOptionContractSymbolOrId({ symbolOrId: "AAPL250117C00150000" });
+```
+
+##### `alpaca.trading.assets.usCorporates`
+
+Reference data for US corporate bonds (by ISIN, CUSIP or ticker).
+
+```ts
+await alpaca.trading.assets.usCorporates({ tickers: "AAPL" });
+```
+
+##### `alpaca.trading.assets.usTreasuries`
+
+Reference data for US Treasury instruments.
+
+```ts
+await alpaca.trading.assets.usTreasuries({ cusips: "912797JL3" });
+```
+
+#### `alpaca.trading.calendar` — CalendarApi
+
+Market calendar and clock (open/close, sessions).
+
+##### `alpaca.trading.calendar.calendar`
+
+Market calendar (sessions) for a market and date range.
+
+```ts
+await alpaca.trading.calendar.calendar({ market: "us_equity", start: new Date("2024-01-01"), end: new Date("2024-01-31") });
+```
+
+##### `alpaca.trading.calendar.clock`
+
+Current market clock: open/closed and next open/close.
+
+```ts
+await alpaca.trading.calendar.clock();
+```
+
+##### `alpaca.trading.calendar.legacyCalendar`
+
+Legacy market-calendar endpoint (prefer `calendar`).
+
+```ts
+await alpaca.trading.calendar.legacyCalendar({ start: new Date("2024-01-01"), end: new Date("2024-01-31") });
+```
+
+##### `alpaca.trading.calendar.legacyClock`
+
+Legacy market-clock endpoint (prefer `clock`).
+
+```ts
+await alpaca.trading.calendar.legacyClock();
+```
+
+#### `alpaca.trading.corporateActions` — CorporateActionsApi
+
+Corporate-action announcements (splits, dividends, mergers).
+
+##### `alpaca.trading.corporateActions.getV2CorporateActionsAnnouncements`
+
+Deprecated: corporate-action announcements over a date range.
+
+```ts
+await alpaca.trading.corporateActions.getV2CorporateActionsAnnouncements({ caTypes: "dividend", since: "2024-01-01", until: "2024-01-31" });
+```
+
+##### `alpaca.trading.corporateActions.getV2CorporateActionsAnnouncementsId`
+
+Deprecated: a single corporate-action announcement by id.
+
+```ts
+await alpaca.trading.corporateActions.getV2CorporateActionsAnnouncementsId({ id: "be3c368a-4c7c-4384-808e-f02c9f5a8afe" });
+```
+
+#### `alpaca.trading.cryptoFunding` — CryptoFundingApi
+
+Crypto wallets, transfers and whitelisted withdrawal addresses.
+
+##### `alpaca.trading.cryptoFunding.createCryptoTransferForAccount`
+
+Initiate a crypto withdrawal/transfer for the account.
+
+```ts
+await alpaca.trading.cryptoFunding.createCryptoTransferForAccount({ createCryptoTransferRequest: { amount: "0.5", address: "0xabc...", asset: "ETH" } });
+```
+
+##### `alpaca.trading.cryptoFunding.getCryptoFundingTransfer`
+
+Fetch a single crypto transfer by id.
+
+```ts
+await alpaca.trading.cryptoFunding.getCryptoFundingTransfer({ transferId: "f1...e9" });
+```
+
+##### `alpaca.trading.cryptoFunding.listCryptoFundingTransfers`
+
+List crypto transfers for the account.
+
+```ts
+await alpaca.trading.cryptoFunding.listCryptoFundingTransfers();
+```
+
+##### `alpaca.trading.cryptoFunding.getCryptoTransferEstimate`
+
+Estimate fees for a crypto transfer.
+
+```ts
+await alpaca.trading.cryptoFunding.getCryptoTransferEstimate({ asset: "ETH", fromAddress: "0xabc...", toAddress: "0xdef...", amount: "0.5" });
+```
+
+##### `alpaca.trading.cryptoFunding.listCryptoFundingWallets`
+
+List the account's crypto wallets.
+
+```ts
+await alpaca.trading.cryptoFunding.listCryptoFundingWallets({ asset: "ETH" });
+```
+
+##### `alpaca.trading.cryptoFunding.createWhitelistedAddress`
+
+Whitelist a crypto withdrawal address.
+
+```ts
+await alpaca.trading.cryptoFunding.createWhitelistedAddress({ createWhitelistedAddressRequest: { address: "0xabc...", asset: "ETH" } });
+```
+
+##### `alpaca.trading.cryptoFunding.deleteWhitelistedAddress`
+
+Remove a whitelisted crypto address.
+
+```ts
+await alpaca.trading.cryptoFunding.deleteWhitelistedAddress({ whitelistedAddressId: "a1...c2" });
+```
+
+##### `alpaca.trading.cryptoFunding.listWhitelistedAddress`
+
+List whitelisted crypto withdrawal addresses.
+
+```ts
+await alpaca.trading.cryptoFunding.listWhitelistedAddress();
+```
+
+#### `alpaca.trading.cryptoPerpetualsAccountVitals` — CryptoPerpetualsAccountVitalsBetaApi
+
+Crypto perpetual-futures account vitals (beta).
+
+##### `alpaca.trading.cryptoPerpetualsAccountVitals.getCryptoPerpAccountVitals`
+
+Crypto perpetual-futures account vitals: margin, collateral, P&L (beta).
+
+```ts
+await alpaca.trading.cryptoPerpetualsAccountVitals.getCryptoPerpAccountVitals();
+```
+
+#### `alpaca.trading.cryptoPerpetualsFunding` — CryptoPerpetualsFundingBetaApi
+
+Crypto perpetual-futures wallets and transfers (beta).
+
+##### `alpaca.trading.cryptoPerpetualsFunding.createCryptoPerpTransferForAccount`
+
+Initiate a crypto perpetual-futures transfer (beta).
+
+```ts
+await alpaca.trading.cryptoPerpetualsFunding.createCryptoPerpTransferForAccount({ createCryptoTransferRequest: { amount: "100", asset: "USDT" } });
+```
+
+##### `alpaca.trading.cryptoPerpetualsFunding.getCryptoPerpFundingTransfer`
+
+Fetch a single perpetual-futures transfer by id (beta).
+
+```ts
+await alpaca.trading.cryptoPerpetualsFunding.getCryptoPerpFundingTransfer({ transferId: "f1...e9" });
+```
+
+##### `alpaca.trading.cryptoPerpetualsFunding.getCryptoPerpTransferEstimate`
+
+Estimate fees for a perpetual-futures transfer (beta).
+
+```ts
+await alpaca.trading.cryptoPerpetualsFunding.getCryptoPerpTransferEstimate({ asset: "USDT", amount: "100" });
+```
+
+##### `alpaca.trading.cryptoPerpetualsFunding.listCryptoPerpFundingTransfers`
+
+List perpetual-futures transfers (beta).
+
+```ts
+await alpaca.trading.cryptoPerpetualsFunding.listCryptoPerpFundingTransfers();
+```
+
+##### `alpaca.trading.cryptoPerpetualsFunding.listCryptoPerpFundingWallets`
+
+List perpetual-futures wallets (beta).
+
+```ts
+await alpaca.trading.cryptoPerpetualsFunding.listCryptoPerpFundingWallets({ asset: "USDT" });
+```
+
+##### `alpaca.trading.cryptoPerpetualsFunding.createWhitelistedPerpAddress`
+
+Whitelist a perpetual-futures withdrawal address (beta).
+
+```ts
+await alpaca.trading.cryptoPerpetualsFunding.createWhitelistedPerpAddress({ createWhitelistedPerpAddressRequest: { address: "0xabc...", asset: "USDT" } });
+```
+
+##### `alpaca.trading.cryptoPerpetualsFunding.deleteWhitelistedPerpAddress`
+
+Remove a whitelisted perpetual-futures address (beta).
+
+```ts
+await alpaca.trading.cryptoPerpetualsFunding.deleteWhitelistedPerpAddress({ whitelistedAddressId: "a1...c2" });
+```
+
+##### `alpaca.trading.cryptoPerpetualsFunding.listWhitelistedPerpAddress`
+
+List whitelisted perpetual-futures addresses (beta).
+
+```ts
+await alpaca.trading.cryptoPerpetualsFunding.listWhitelistedPerpAddress();
+```
+
+#### `alpaca.trading.cryptoPerpetualsLeverage` — CryptoPerpetualsLeverageBetaApi
+
+Read/set crypto perpetual-futures account leverage (beta).
+
+##### `alpaca.trading.cryptoPerpetualsLeverage.getCryptoPerpAccountLeverage`
+
+Read crypto perpetual-futures account leverage (beta).
+
+```ts
+await alpaca.trading.cryptoPerpetualsLeverage.getCryptoPerpAccountLeverage({ symbol: "BTC-PERP" });
+```
+
+##### `alpaca.trading.cryptoPerpetualsLeverage.setCryptoPerpAccountLeverage`
+
+Set crypto perpetual-futures account leverage (beta).
+
+```ts
+await alpaca.trading.cryptoPerpetualsLeverage.setCryptoPerpAccountLeverage({ symbol: "BTC-PERP", leverage: 5 });
+```
+
+#### `alpaca.trading.events` — EventsApi
+
+Server-sent event streams for account activity.
+
+##### `alpaca.trading.events.subscribeToActivitiesSSE`
+
+Server-sent event stream of account activities.
+
+```ts
+await alpaca.trading.events.subscribeToActivitiesSSE({ sinceId: "20240101000000000::..." });
+```
+
+#### `alpaca.trading.orders` — OrdersApi
+
+Place, read, replace and cancel orders.
+
+##### `alpaca.trading.orders.getAllOrders`
+
+List orders, filterable by status, side and symbol.
+
+```ts
+await alpaca.trading.orders.getAllOrders({ status: "open", limit: 100 });
+```
+
+##### `alpaca.trading.orders.postOrder`
+
+Place an order (raw). Prefer the typed builders under Ergonomic helpers.
+
+```ts
+await alpaca.trading.orders.postOrder({ postOrderRequest: { symbol: "AAPL", qty: "1", side: "buy", type: "market", timeInForce: "day" } });
+```
+
+##### `alpaca.trading.orders.getOrderByOrderID`
+
+Fetch a single order by its order id.
+
+```ts
+await alpaca.trading.orders.getOrderByOrderID({ orderId: "f1...e9" });
+```
+
+##### `alpaca.trading.orders.getOrderByClientOrderId`
+
+Fetch a single order by your client order id.
+
+```ts
+await alpaca.trading.orders.getOrderByClientOrderId({ clientOrderId: "my-order-1" });
+```
+
+##### `alpaca.trading.orders.patchOrderByOrderId`
+
+Replace (amend) an open order.
+
+```ts
+await alpaca.trading.orders.patchOrderByOrderId({ orderId: "f1...e9", patchOrderRequest: { qty: "2" } });
+```
+
+##### `alpaca.trading.orders.deleteOrderByOrderID`
+
+Cancel a single open order.
+
+```ts
+await alpaca.trading.orders.deleteOrderByOrderID({ orderId: "f1...e9" });
+```
+
+##### `alpaca.trading.orders.deleteAllOrders`
+
+Cancel all open orders.
+
+```ts
+await alpaca.trading.orders.deleteAllOrders();
+```
+
+#### `alpaca.trading.portfolioHistory` — PortfolioHistoryApi
+
+Time series of account equity / P&L.
+
+##### `alpaca.trading.portfolioHistory.getAccountPortfolioHistory`
+
+Time series of account equity and profit/loss.
+
+```ts
+await alpaca.trading.portfolioHistory.getAccountPortfolioHistory({ period: "1M", timeframe: "1D" });
+```
+
+#### `alpaca.trading.positions` — PositionsApi
+
+Open positions; close positions; exercise options.
+
+##### `alpaca.trading.positions.getAllOpenPositions`
+
+List all open positions.
+
+```ts
+await alpaca.trading.positions.getAllOpenPositions();
+```
+
+##### `alpaca.trading.positions.getOpenPosition`
+
+Fetch a single open position by symbol or asset id.
+
+```ts
+await alpaca.trading.positions.getOpenPosition({ symbolOrAssetId: "AAPL" });
+```
+
+##### `alpaca.trading.positions.deleteAllOpenPositions`
+
+Liquidate every open position (optionally cancel orders first).
+
+```ts
+await alpaca.trading.positions.deleteAllOpenPositions({ cancelOrders: true });
+```
+
+##### `alpaca.trading.positions.deleteOpenPosition`
+
+Close a position: whole, partial qty, or a percentage.
+
+```ts
+await alpaca.trading.positions.deleteOpenPosition({ symbolOrAssetId: "AAPL", percentage: 50 });
+```
+
+##### `alpaca.trading.positions.optionExercise`
+
+Exercise a held option position.
+
+```ts
+await alpaca.trading.positions.optionExercise({ symbolOrContractId: "AAPL250117C00150000" });
+```
+
+##### `alpaca.trading.positions.optionDoNotExercise`
+
+Submit a do-not-exercise instruction for an option position.
+
+```ts
+await alpaca.trading.positions.optionDoNotExercise({ symbolOrContractId: "AAPL250117C00150000" });
+```
+
+#### `alpaca.trading.tokenization` — TokenizationApi
+
+Tokenization requests and minting.
+
+##### `alpaca.trading.tokenization.getTokenizationRequests`
+
+List tokenization (mint/redeem) requests.
+
+```ts
+await alpaca.trading.tokenization.getTokenizationRequests({ status: "completed" });
+```
+
+##### `alpaca.trading.tokenization.postTokenizationMint`
+
+Submit a tokenization mint request.
+
+```ts
+await alpaca.trading.tokenization.postTokenizationMint({ tokenizationMintRequest: { underlyingSymbol: "AAPL", quantity: "1" } });
+```
+
+#### `alpaca.trading.watchlists` — WatchlistsApi
+
+Create and manage watchlists and their assets.
+
+##### `alpaca.trading.watchlists.getWatchlists`
+
+List all watchlists.
+
+```ts
+await alpaca.trading.watchlists.getWatchlists();
+```
+
+##### `alpaca.trading.watchlists.getWatchlistById`
+
+Fetch a single watchlist by id.
+
+```ts
+await alpaca.trading.watchlists.getWatchlistById({ watchlistId: "f1...e9" });
+```
+
+##### `alpaca.trading.watchlists.getWatchlistByName`
+
+Fetch a single watchlist by name.
+
+```ts
+await alpaca.trading.watchlists.getWatchlistByName({ name: "My List" });
+```
+
+##### `alpaca.trading.watchlists.postWatchlist`
+
+Create a watchlist with an initial set of symbols.
+
+```ts
+await alpaca.trading.watchlists.postWatchlist({ updateWatchlistRequest: { name: "Tech", symbols: ["AAPL", "MSFT"] } });
+```
+
+##### `alpaca.trading.watchlists.updateWatchlistById`
+
+Update a watchlist (name and/or symbols) by id.
+
+```ts
+await alpaca.trading.watchlists.updateWatchlistById({ watchlistId: "f1...e9", updateWatchlistRequest: { name: "Renamed" } });
+```
+
+##### `alpaca.trading.watchlists.updateWatchlistByName`
+
+Update a watchlist (name and/or symbols) by name.
+
+```ts
+await alpaca.trading.watchlists.updateWatchlistByName({ name: "Tech", updateWatchlistRequest: { symbols: ["AAPL"] } });
+```
+
+##### `alpaca.trading.watchlists.addAssetToWatchlist`
+
+Add an asset to a watchlist by id.
+
+```ts
+await alpaca.trading.watchlists.addAssetToWatchlist({ watchlistId: "f1...e9", addAssetToWatchlistRequest: { symbol: "NVDA" } });
+```
+
+##### `alpaca.trading.watchlists.addAssetToWatchlistByName`
+
+Add an asset to a watchlist by name.
+
+```ts
+await alpaca.trading.watchlists.addAssetToWatchlistByName({ name: "Tech", addAssetToWatchlistRequest: { symbol: "NVDA" } });
+```
+
+##### `alpaca.trading.watchlists.removeAssetFromWatchlist`
+
+Remove an asset from a watchlist by id.
+
+```ts
+await alpaca.trading.watchlists.removeAssetFromWatchlist({ watchlistId: "f1...e9", symbol: "NVDA" });
+```
+
+##### `alpaca.trading.watchlists.deleteWatchlistById`
+
+Delete a watchlist by id.
+
+```ts
+await alpaca.trading.watchlists.deleteWatchlistById({ watchlistId: "f1...e9" });
+```
+
+##### `alpaca.trading.watchlists.deleteWatchlistByName`
+
+Delete a watchlist by name.
+
+```ts
+await alpaca.trading.watchlists.deleteWatchlistByName({ name: "Tech" });
+```
+
+### Market Data API
+
+#### `alpaca.marketData.stocks` — StockApi
+
+US-equity bars, trades, quotes, auctions and snapshots.
+
+##### `alpaca.marketData.stocks.stockBars`
+
+Historical bars for one or more stocks (paginated).
+
+```ts
+await alpaca.marketData.stocks.stockBars({ symbols: "AAPL,MSFT", timeframe: "1Day", start: new Date("2024-01-01") });
+```
+
+##### `alpaca.marketData.stocks.stockTrades`
+
+Historical trades for one or more stocks (paginated).
+
+```ts
+await alpaca.marketData.stocks.stockTrades({ symbols: "AAPL", start: new Date("2024-01-02") });
+```
+
+##### `alpaca.marketData.stocks.stockQuotes`
+
+Historical quotes for one or more stocks (paginated).
+
+```ts
+await alpaca.marketData.stocks.stockQuotes({ symbols: "AAPL", start: new Date("2024-01-02") });
+```
+
+##### `alpaca.marketData.stocks.stockAuctions`
+
+Historical opening/closing auctions for stocks (paginated).
+
+```ts
+await alpaca.marketData.stocks.stockAuctions({ symbols: "AAPL", start: new Date("2024-01-02") });
+```
+
+##### `alpaca.marketData.stocks.stockSnapshots`
+
+Latest snapshot (trade, quote, bars) for one or more stocks.
+
+```ts
+await alpaca.marketData.stocks.stockSnapshots({ symbols: "AAPL,MSFT" });
+```
+
+##### `alpaca.marketData.stocks.stockLatestBars`
+
+Latest minute bar for one or more stocks.
+
+```ts
+await alpaca.marketData.stocks.stockLatestBars({ symbols: "AAPL,MSFT" });
+```
+
+##### `alpaca.marketData.stocks.stockLatestQuotes`
+
+Latest quote for one or more stocks.
+
+```ts
+await alpaca.marketData.stocks.stockLatestQuotes({ symbols: "AAPL,MSFT" });
+```
+
+##### `alpaca.marketData.stocks.stockLatestTrades`
+
+Latest trade for one or more stocks.
+
+```ts
+await alpaca.marketData.stocks.stockLatestTrades({ symbols: "AAPL,MSFT" });
+```
+
+##### `alpaca.marketData.stocks.stockMetaConditions`
+
+Trade/quote condition-code mappings for a tape.
+
+```ts
+await alpaca.marketData.stocks.stockMetaConditions({ ticktype: "trade", tape: "A" });
+```
+
+##### `alpaca.marketData.stocks.stockMetaExchanges`
+
+Exchange-code mappings.
+
+```ts
+await alpaca.marketData.stocks.stockMetaExchanges();
+```
+
+#### `alpaca.marketData.crypto` — CryptoApi
+
+Crypto bars, trades, quotes, orderbooks and snapshots.
+
+##### `alpaca.marketData.crypto.cryptoBars`
+
+Historical crypto bars (paginated); `loc` selects the data region.
+
+```ts
+await alpaca.marketData.crypto.cryptoBars({ loc: "us", symbols: "BTC/USD,ETH/USD", timeframe: "1Day", start: new Date("2024-01-01") });
+```
+
+##### `alpaca.marketData.crypto.cryptoTrades`
+
+Historical crypto trades (paginated).
+
+```ts
+await alpaca.marketData.crypto.cryptoTrades({ loc: "us", symbols: "BTC/USD", start: new Date("2024-01-02") });
+```
+
+##### `alpaca.marketData.crypto.cryptoQuotes`
+
+Historical crypto quotes (paginated).
+
+```ts
+await alpaca.marketData.crypto.cryptoQuotes({ loc: "us", symbols: "BTC/USD", start: new Date("2024-01-02") });
+```
+
+##### `alpaca.marketData.crypto.cryptoSnapshots`
+
+Latest snapshot for one or more crypto pairs.
+
+```ts
+await alpaca.marketData.crypto.cryptoSnapshots({ loc: "us", symbols: "BTC/USD,ETH/USD" });
+```
+
+##### `alpaca.marketData.crypto.cryptoLatestBars`
+
+Latest bar for one or more crypto pairs.
+
+```ts
+await alpaca.marketData.crypto.cryptoLatestBars({ loc: "us", symbols: "BTC/USD" });
+```
+
+##### `alpaca.marketData.crypto.cryptoLatestQuotes`
+
+Latest quote for one or more crypto pairs.
+
+```ts
+await alpaca.marketData.crypto.cryptoLatestQuotes({ loc: "us", symbols: "BTC/USD" });
+```
+
+##### `alpaca.marketData.crypto.cryptoLatestTrades`
+
+Latest trade for one or more crypto pairs.
+
+```ts
+await alpaca.marketData.crypto.cryptoLatestTrades({ loc: "us", symbols: "BTC/USD" });
+```
+
+##### `alpaca.marketData.crypto.cryptoLatestOrderbooks`
+
+Latest order book for one or more crypto pairs.
+
+```ts
+await alpaca.marketData.crypto.cryptoLatestOrderbooks({ loc: "us", symbols: "BTC/USD" });
+```
+
+#### `alpaca.marketData.cryptoPerpetualFutures` — CryptoPerpetualFuturesApi
+
+Crypto perpetual-futures latest market data.
+
+##### `alpaca.marketData.cryptoPerpetualFutures.cryptoPerpLatestBars`
+
+Latest bar for one or more crypto perpetual-futures contracts.
+
+```ts
+await alpaca.marketData.cryptoPerpetualFutures.cryptoPerpLatestBars({ loc: "global", symbols: "BTC-PERP" });
+```
+
+##### `alpaca.marketData.cryptoPerpetualFutures.cryptoPerpLatestQuotes`
+
+Latest quote for one or more perpetual-futures contracts.
+
+```ts
+await alpaca.marketData.cryptoPerpetualFutures.cryptoPerpLatestQuotes({ loc: "global", symbols: "BTC-PERP" });
+```
+
+##### `alpaca.marketData.cryptoPerpetualFutures.cryptoPerpLatestTrades`
+
+Latest trade for one or more perpetual-futures contracts.
+
+```ts
+await alpaca.marketData.cryptoPerpetualFutures.cryptoPerpLatestTrades({ loc: "global", symbols: "BTC-PERP" });
+```
+
+##### `alpaca.marketData.cryptoPerpetualFutures.cryptoPerpLatestOrderbooks`
+
+Latest order book for one or more perpetual-futures contracts.
+
+```ts
+await alpaca.marketData.cryptoPerpetualFutures.cryptoPerpLatestOrderbooks({ loc: "global", symbols: "BTC-PERP" });
+```
+
+##### `alpaca.marketData.cryptoPerpetualFutures.cryptoPerpLatestFuturesPricing`
+
+Latest funding/mark pricing for perpetual-futures contracts.
+
+```ts
+await alpaca.marketData.cryptoPerpetualFutures.cryptoPerpLatestFuturesPricing({ loc: "global", symbols: "BTC-PERP" });
+```
+
+#### `alpaca.marketData.fixedIncome` — FixedIncomeApi
+
+Fixed-income latest prices and quotes.
+
+##### `alpaca.marketData.fixedIncome.fixedIncomeLatestPrices`
+
+Latest fixed-income prices by ISIN.
+
+```ts
+await alpaca.marketData.fixedIncome.fixedIncomeLatestPrices({ isins: "US0378331005" });
+```
+
+##### `alpaca.marketData.fixedIncome.fixedIncomeLatestQuotes`
+
+Latest fixed-income quotes by ISIN.
+
+```ts
+await alpaca.marketData.fixedIncome.fixedIncomeLatestQuotes({ isins: "US0378331005", tradeSize: 100 });
+```
+
+#### `alpaca.marketData.forex` — ForexApi
+
+Foreign-exchange historical and latest rates.
+
+##### `alpaca.marketData.forex.rates`
+
+Historical forex rates for currency pairs (paginated).
+
+```ts
+await alpaca.marketData.forex.rates({ currencyPairs: "EUR/USD", timeframe: "1Day", start: new Date("2024-01-01") });
+```
+
+##### `alpaca.marketData.forex.latestRates`
+
+Latest forex rates for one or more currency pairs.
+
+```ts
+await alpaca.marketData.forex.latestRates({ currencyPairs: "EUR/USD,GBP/USD" });
+```
+
+#### `alpaca.marketData.indices` — IndexApi
+
+Index historical and latest values.
+
+##### `alpaca.marketData.indices.indexValues`
+
+Historical index values (paginated).
+
+```ts
+await alpaca.marketData.indices.indexValues({ symbols: "SPX", start: new Date("2024-01-01") });
+```
+
+##### `alpaca.marketData.indices.indexLatestValues`
+
+Latest values for one or more indices.
+
+```ts
+await alpaca.marketData.indices.indexLatestValues({ symbols: "SPX" });
+```
+
+#### `alpaca.marketData.logos` — LogosApi
+
+Company logo images.
+
+##### `alpaca.marketData.logos.logos`
+
+Company logo image bytes for a symbol.
+
+```ts
+await alpaca.marketData.logos.logos({ symbol: "AAPL" });
+```
+
+#### `alpaca.marketData.news` — NewsApi
+
+Market news articles.
+
+##### `alpaca.marketData.news.news`
+
+Latest news articles across stocks and crypto (paginated).
+
+```ts
+await alpaca.marketData.news.news({ symbols: "AAPL,TSLA", limit: 10 });
+```
+
+#### `alpaca.marketData.options` — OptionApi
+
+Options bars, trades, chains and snapshots.
+
+##### `alpaca.marketData.options.optionBars`
+
+Historical option bars (paginated).
+
+```ts
+await alpaca.marketData.options.optionBars({ symbols: "AAPL250117C00150000", timeframe: "1Day", start: new Date("2024-01-01") });
+```
+
+##### `alpaca.marketData.options.optionTrades`
+
+Historical option trades (paginated).
+
+```ts
+await alpaca.marketData.options.optionTrades({ symbols: "AAPL250117C00150000", start: new Date("2024-01-02") });
+```
+
+##### `alpaca.marketData.options.optionChain`
+
+Snapshots for an underlying's full option chain (paginated).
+
+```ts
+await alpaca.marketData.options.optionChain({ underlyingSymbol: "AAPL", type: "call" });
+```
+
+##### `alpaca.marketData.options.optionSnapshots`
+
+Latest snapshots for one or more option contracts.
+
+```ts
+await alpaca.marketData.options.optionSnapshots({ symbols: "AAPL250117C00150000" });
+```
+
+##### `alpaca.marketData.options.optionLatestQuotes`
+
+Latest quotes for one or more option contracts.
+
+```ts
+await alpaca.marketData.options.optionLatestQuotes({ symbols: "AAPL250117C00150000" });
+```
+
+##### `alpaca.marketData.options.optionLatestTrades`
+
+Latest trades for one or more option contracts.
+
+```ts
+await alpaca.marketData.options.optionLatestTrades({ symbols: "AAPL250117C00150000" });
+```
+
+##### `alpaca.marketData.options.optionMetaConditions`
+
+Option trade/quote condition-code mappings.
+
+```ts
+await alpaca.marketData.options.optionMetaConditions({ ticktype: "trade" });
+```
+
+##### `alpaca.marketData.options.optionMetaExchanges`
+
+Option exchange-code mappings.
+
+```ts
+await alpaca.marketData.options.optionMetaExchanges();
+```
+
+#### `alpaca.marketData.screener` — ScreenerApi
+
+Market movers and most-active screeners.
+
+##### `alpaca.marketData.screener.mostActives`
+
+Most-active stocks by volume or trade count.
+
+```ts
+await alpaca.marketData.screener.mostActives({ by: "volume", top: 10 });
+```
+
+##### `alpaca.marketData.screener.movers`
+
+Top market gainers and losers.
+
+```ts
+await alpaca.marketData.screener.movers({ marketType: "stocks", top: 10 });
+```
+
+#### `alpaca.marketData.corporateActions` — CorporateActionsApi
+
+Historical corporate-action data.
+
+##### `alpaca.marketData.corporateActions.corporateActions`
+
+Historical corporate-action data by symbol and type (paginated).
+
+```ts
+await alpaca.marketData.corporateActions.corporateActions({ symbols: "AAPL", types: "cash_dividend", start: new Date("2024-01-01") });
+```
+
+### Real-time streaming
+
+#### `alpaca.trading.stream` — TradingStream
+
+Open the trading-updates WebSocket (order/account events, JSON).
+
+```ts
+const updates = alpaca.trading.stream();
+updates.onTradeUpdate((u) => console.log(u.event, u.order.symbol));
+updates.onConnect(() => updates.subscribeTradeUpdates());
+updates.connect();
+```
+
+#### `alpaca.marketData.stockStream` — StockDataStream
+
+Open the US-equity market-data WebSocket (msgpack).
+
+```ts
+const stocks = alpaca.marketData.stockStream({ feed: "iex" });
+stocks.onBar((bar) => console.log(bar.symbol, bar.close));
+stocks.onConnect(() => stocks.subscribeForBars(["AAPL", "MSFT"]));
+stocks.connect();
+```
+
+#### `alpaca.marketData.cryptoStream` — CryptoDataStream
+
+Open the crypto market-data WebSocket (msgpack).
+
+```ts
+const crypto = alpaca.marketData.cryptoStream();
+crypto.onTrade((t) => console.log(t.symbol, t.price));
+crypto.onConnect(() => crypto.subscribeForTrades(["BTC/USD"]));
+crypto.connect();
+```
+
+#### `alpaca.marketData.optionStream` — OptionDataStream
+
+Open the options market-data WebSocket (msgpack).
+
+```ts
+const opts = alpaca.marketData.optionStream();
+opts.onTrade((t) => console.log(t.symbol, t.price));
+opts.onConnect(() => opts.subscribeForTrades(["AAPL250117C00150000"]));
+opts.connect();
+```
+
+#### `alpaca.marketData.newsStream` — NewsStream
+
+Open the real-time news-headline WebSocket.
+
+```ts
+const news = alpaca.marketData.newsStream();
+news.onNews((n) => console.log(n.headline));
+news.onConnect(() => news.subscribeForNews(["AAPL", "TSLA"]));
+news.connect();
+```
+
+### Ergonomic helpers
+
+#### `alpaca.trading.orders` — order builders
+
+One typed builder per order kind; drops the postOrder wrapper and enforces required fields at compile time.
+
+##### `alpaca.trading.orders.market`
+
+Place a market order (exactly one of `qty`/`notional`).
+
+```ts
+await alpaca.trading.orders.market({ symbol: "AAPL", side: "buy", qty: 1 });
+```
+
+##### `alpaca.trading.orders.limit`
+
+Place a limit order.
+
+```ts
+await alpaca.trading.orders.limit({ symbol: "AAPL", side: "buy", qty: 1, limitPrice: 150 });
+```
+
+##### `alpaca.trading.orders.stop`
+
+Place a stop (stop-market) order.
+
+```ts
+await alpaca.trading.orders.stop({ symbol: "AAPL", side: "sell", qty: 1, stopPrice: 140 });
+```
+
+##### `alpaca.trading.orders.stopLimit`
+
+Place a stop-limit order.
+
+```ts
+await alpaca.trading.orders.stopLimit({ symbol: "AAPL", side: "sell", qty: 1, stopPrice: 140, limitPrice: 139 });
+```
+
+##### `alpaca.trading.orders.trailingStop`
+
+Place a trailing-stop order (one of `trailPrice`/`trailPercent`).
+
+```ts
+await alpaca.trading.orders.trailingStop({ symbol: "AAPL", side: "sell", qty: 1, trailPercent: 5 });
+```
+
+##### `alpaca.trading.orders.bracket`
+
+Place a bracket order: entry plus take-profit and stop-loss legs.
+
+```ts
+await alpaca.trading.orders.bracket({ symbol: "AAPL", side: "buy", qty: 1, takeProfit: { limitPrice: 160 }, stopLoss: { stopPrice: 140 } });
+```
+
+##### `alpaca.trading.orders.oco`
+
+Place a one-cancels-other order (take-profit + stop-loss on a held position).
+
+```ts
+await alpaca.trading.orders.oco({ symbol: "AAPL", side: "sell", qty: 1, takeProfit: { limitPrice: 160 }, stopLoss: { stopPrice: 140 } });
+```
+
+##### `alpaca.trading.orders.oto`
+
+Place a one-triggers-other order (entry that triggers a single leg).
+
+```ts
+await alpaca.trading.orders.oto({ symbol: "AAPL", side: "buy", qty: 1, limitPrice: 150, takeProfit: { limitPrice: 160 } });
+```
+
+##### `alpaca.trading.orders.submit`
+
+Generic builder escape hatch for shapes the typed builders don't cover (e.g. `mleg`).
+
+```ts
+await alpaca.trading.orders.submit({ type: "market", symbol: "AAPL", side: "buy", qty: 1 });
+```
+
+#### `alpaca.trading` — workflow helpers
+
+High-level trading flows that would otherwise be boilerplate.
+
+##### `alpaca.trading.submitAndWait`
+
+Place an order and resolve once it reaches a terminal state, observed over the trading stream.
+
+```ts
+const filled = await alpaca.trading.submitAndWait({ type: "market", symbol: "AAPL", side: "buy", qty: 1 }, { timeoutMs: 30_000 });
+```
+
+##### `alpaca.trading.closeAllPositions`
+
+Close every open position (optionally cancel open orders first).
+
+```ts
+await alpaca.trading.closeAllPositions({ cancelOrders: true });
+```
+
+#### `alpaca.trading` — pagination helpers
+
+Auto-paginated iterate/collect helpers for option contracts and account activities.
+
+##### `alpaca.trading.iterateOptionsContracts`
+
+Lazily yield option contracts across all pages.
+
+```ts
+for await (const contract of alpaca.trading.iterateOptionsContracts({ underlyingSymbols: "AAPL" })) console.log(contract.symbol);
+```
+
+##### `alpaca.trading.collectOptionsContracts`
+
+Eagerly collect all option contracts across pages into one array.
+
+```ts
+const contracts = await alpaca.trading.collectOptionsContracts({ underlyingSymbols: "AAPL" });
+```
+
+##### `alpaca.trading.iterateActivities`
+
+Lazily yield account activities across all pages.
+
+```ts
+for await (const activity of alpaca.trading.iterateActivities({ activityTypes: ["FILL"] })) console.log(activity.id);
+```
+
+##### `alpaca.trading.collectActivities`
+
+Eagerly collect all account activities across pages into one array.
+
+```ts
+const activities = await alpaca.trading.collectActivities({ activityTypes: ["FILL"] });
+```
+
+##### `alpaca.trading.iterateActivitiesByType`
+
+Lazily yield activities of a single type across all pages.
+
+```ts
+for await (const fill of alpaca.trading.iterateActivitiesByType({ activityType: "FILL" })) console.log(fill.id);
+```
+
+##### `alpaca.trading.collectActivitiesByType`
+
+Eagerly collect activities of a single type into one array.
+
+```ts
+const fills = await alpaca.trading.collectActivitiesByType({ activityType: "FILL" });
+```
+
+#### `alpaca.marketData` — workflow helpers
+
+High-level market-data flows that would otherwise be boilerplate.
+
+##### `alpaca.marketData.getLatestPrice`
+
+Latest trade price for a symbol as a `number` (or `undefined`).
+
+```ts
+const price = await alpaca.marketData.getLatestPrice("AAPL");
+```
+
+#### `alpaca.marketData` — normalized accessors
+
+Auto-paginated, symbol-keyed accessors returning canonical Bar/Trade/Quote shapes (and chart-ready Candles), unified with the streaming layer.
+
+##### `alpaca.marketData.getStockBars`
+
+Historical stock bars as canonical `Bar`s, auto-paginated and keyed by symbol.
+
+```ts
+const bars = await alpaca.marketData.getStockBars({ symbols: ["AAPL"], timeframe: "1Day", start: new Date("2024-01-01") });
+```
+
+##### `alpaca.marketData.getCryptoBars`
+
+Historical crypto bars as canonical `Bar`s, keyed by symbol.
+
+```ts
+const bars = await alpaca.marketData.getCryptoBars({ loc: "us", symbols: ["BTC/USD"], timeframe: "1Day", start: new Date("2024-01-01") });
+```
+
+##### `alpaca.marketData.getOptionBars`
+
+Historical option bars as canonical `Bar`s, keyed by symbol.
+
+```ts
+const bars = await alpaca.marketData.getOptionBars({ symbols: ["AAPL250117C00150000"], timeframe: "1Day", start: new Date("2024-01-01") });
+```
+
+##### `alpaca.marketData.getStockTrades`
+
+Historical stock trades as canonical `Trade`s, keyed by symbol.
+
+```ts
+const trades = await alpaca.marketData.getStockTrades({ symbols: ["AAPL"], start: new Date("2024-01-02") });
+```
+
+##### `alpaca.marketData.getCryptoTrades`
+
+Historical crypto trades as canonical `Trade`s, keyed by symbol.
+
+```ts
+const trades = await alpaca.marketData.getCryptoTrades({ loc: "us", symbols: ["BTC/USD"], start: new Date("2024-01-02") });
+```
+
+##### `alpaca.marketData.getStockQuotes`
+
+Historical stock quotes as canonical `Quote`s, keyed by symbol.
+
+```ts
+const quotes = await alpaca.marketData.getStockQuotes({ symbols: ["AAPL"], start: new Date("2024-01-02") });
+```
+
+##### `alpaca.marketData.getCryptoQuotes`
+
+Historical crypto quotes as canonical `Quote`s, keyed by symbol.
+
+```ts
+const quotes = await alpaca.marketData.getCryptoQuotes({ loc: "us", symbols: ["BTC/USD"], start: new Date("2024-01-02") });
+```
+
+##### `alpaca.marketData.getStockCandles`
+
+Historical stock bars as chart-ready columnar `Candles`, keyed by symbol.
+
+```ts
+const candles = await alpaca.marketData.getStockCandles({ symbols: ["AAPL"], timeframe: "1Day", start: new Date("2024-01-01") });
+```
+
+##### `alpaca.marketData.getCryptoCandles`
+
+Historical crypto bars as chart-ready columnar `Candles`, keyed by symbol.
+
+```ts
+const candles = await alpaca.marketData.getCryptoCandles({ loc: "us", symbols: ["BTC/USD"], timeframe: "1Day", start: new Date("2024-01-01") });
+```
+
+#### `alpaca.marketData` — pagination helpers
+
+Auto-paginated iterate/collect helpers across every paginated market-data endpoint; the page token is managed for you.
+
+##### `alpaca.marketData.iterateStockBars`
+
+Lazily yield `{ symbol, value }` stock-bar records across symbols and pages.
+
+```ts
+for await (const { symbol, value } of alpaca.marketData.iterateStockBars({ symbols: ["AAPL"], timeframe: "1Day", start: new Date("2024-01-01") })) console.log(symbol, value.c);
+```
+
+##### `alpaca.marketData.collectStockBarsBySymbol`
+
+Collect stock bars merged into a `{ [symbol]: StockBar[] }` map.
+
+```ts
+const bySymbol = await alpaca.marketData.collectStockBarsBySymbol({ symbols: ["AAPL", "MSFT"], timeframe: "1Day", start: new Date("2024-01-01") });
+```
+
+##### `alpaca.marketData.iterateStockTrades`
+
+Lazily yield stock-trade records across symbols and pages.
+
+```ts
+for await (const { symbol, value } of alpaca.marketData.iterateStockTrades({ symbols: ["AAPL"], start: new Date("2024-01-02") })) console.log(symbol, value.p);
+```
+
+##### `alpaca.marketData.collectStockTradesBySymbol`
+
+Collect stock trades merged into a `{ [symbol]: StockTrade[] }` map.
+
+```ts
+const bySymbol = await alpaca.marketData.collectStockTradesBySymbol({ symbols: ["AAPL"], start: new Date("2024-01-02") });
+```
+
+##### `alpaca.marketData.iterateStockQuotes`
+
+Lazily yield stock-quote records across symbols and pages.
+
+```ts
+for await (const { symbol, value } of alpaca.marketData.iterateStockQuotes({ symbols: ["AAPL"], start: new Date("2024-01-02") })) console.log(symbol, value.bp);
+```
+
+##### `alpaca.marketData.collectStockQuotesBySymbol`
+
+Collect stock quotes merged into a `{ [symbol]: StockQuote[] }` map.
+
+```ts
+const bySymbol = await alpaca.marketData.collectStockQuotesBySymbol({ symbols: ["AAPL"], start: new Date("2024-01-02") });
+```
+
+##### `alpaca.marketData.iterateStockAuctions`
+
+Lazily yield daily-auction records across symbols and pages.
+
+```ts
+for await (const { symbol, value } of alpaca.marketData.iterateStockAuctions({ symbols: ["AAPL"], start: new Date("2024-01-02") })) console.log(symbol, value.d);
+```
+
+##### `alpaca.marketData.collectStockAuctionsBySymbol`
+
+Collect stock auctions merged into a `{ [symbol]: StockDailyAuctions[] }` map.
+
+```ts
+const bySymbol = await alpaca.marketData.collectStockAuctionsBySymbol({ symbols: ["AAPL"], start: new Date("2024-01-02") });
+```
+
+##### `alpaca.marketData.iterateCryptoBars`
+
+Lazily yield crypto-bar records across symbols and pages.
+
+```ts
+for await (const { symbol, value } of alpaca.marketData.iterateCryptoBars({ loc: "us", symbols: ["BTC/USD"], timeframe: "1Day", start: new Date("2024-01-01") })) console.log(symbol, value.c);
+```
+
+##### `alpaca.marketData.collectCryptoBarsBySymbol`
+
+Collect crypto bars merged into a `{ [symbol]: CryptoBar[] }` map.
+
+```ts
+const bySymbol = await alpaca.marketData.collectCryptoBarsBySymbol({ loc: "us", symbols: ["BTC/USD"], timeframe: "1Day", start: new Date("2024-01-01") });
+```
+
+##### `alpaca.marketData.iterateCryptoTrades`
+
+Lazily yield crypto-trade records across symbols and pages.
+
+```ts
+for await (const { symbol, value } of alpaca.marketData.iterateCryptoTrades({ loc: "us", symbols: ["BTC/USD"], start: new Date("2024-01-02") })) console.log(symbol, value.p);
+```
+
+##### `alpaca.marketData.collectCryptoTradesBySymbol`
+
+Collect crypto trades merged into a `{ [symbol]: CryptoTrade[] }` map.
+
+```ts
+const bySymbol = await alpaca.marketData.collectCryptoTradesBySymbol({ loc: "us", symbols: ["BTC/USD"], start: new Date("2024-01-02") });
+```
+
+##### `alpaca.marketData.iterateCryptoQuotes`
+
+Lazily yield crypto-quote records across symbols and pages.
+
+```ts
+for await (const { symbol, value } of alpaca.marketData.iterateCryptoQuotes({ loc: "us", symbols: ["BTC/USD"], start: new Date("2024-01-02") })) console.log(symbol, value.bp);
+```
+
+##### `alpaca.marketData.collectCryptoQuotesBySymbol`
+
+Collect crypto quotes merged into a `{ [symbol]: CryptoQuote[] }` map.
+
+```ts
+const bySymbol = await alpaca.marketData.collectCryptoQuotesBySymbol({ loc: "us", symbols: ["BTC/USD"], start: new Date("2024-01-02") });
+```
+
+##### `alpaca.marketData.iterateOptionBars`
+
+Lazily yield option-bar records across symbols and pages.
+
+```ts
+for await (const { symbol, value } of alpaca.marketData.iterateOptionBars({ symbols: ["AAPL250117C00150000"], timeframe: "1Day", start: new Date("2024-01-01") })) console.log(symbol, value.c);
+```
+
+##### `alpaca.marketData.collectOptionBarsBySymbol`
+
+Collect option bars merged into a `{ [symbol]: OptionBar[] }` map.
+
+```ts
+const bySymbol = await alpaca.marketData.collectOptionBarsBySymbol({ symbols: ["AAPL250117C00150000"], timeframe: "1Day", start: new Date("2024-01-01") });
+```
+
+##### `alpaca.marketData.iterateOptionTrades`
+
+Lazily yield option-trade records across symbols and pages.
+
+```ts
+for await (const { symbol, value } of alpaca.marketData.iterateOptionTrades({ symbols: ["AAPL250117C00150000"], start: new Date("2024-01-02") })) console.log(symbol, value.p);
+```
+
+##### `alpaca.marketData.collectOptionTradesBySymbol`
+
+Collect option trades merged into a `{ [symbol]: OptionTrade[] }` map.
+
+```ts
+const bySymbol = await alpaca.marketData.collectOptionTradesBySymbol({ symbols: ["AAPL250117C00150000"], start: new Date("2024-01-02") });
+```
+
+##### `alpaca.marketData.iterateIndexValues`
+
+Lazily yield index-value records across symbols and pages.
+
+```ts
+for await (const { symbol, value } of alpaca.marketData.iterateIndexValues({ symbols: ["SPX"], start: new Date("2024-01-01") })) console.log(symbol, value);
+```
+
+##### `alpaca.marketData.collectIndexValuesBySymbol`
+
+Collect index values merged into a `{ [symbol]: IndexValue[] }` map.
+
+```ts
+const bySymbol = await alpaca.marketData.collectIndexValuesBySymbol({ symbols: ["SPX"], start: new Date("2024-01-01") });
+```
+
+##### `alpaca.marketData.iterateForexRates`
+
+Lazily yield forex-rate records across currency pairs and pages.
+
+```ts
+for await (const { symbol, value } of alpaca.marketData.iterateForexRates({ currencyPairs: ["EUR/USD"], start: new Date("2024-01-01") })) console.log(symbol, value);
+```
+
+##### `alpaca.marketData.collectForexRatesBySymbol`
+
+Collect forex rates merged into a `{ [pair]: ForexRate[] }` map.
+
+```ts
+const byPair = await alpaca.marketData.collectForexRatesBySymbol({ currencyPairs: ["EUR/USD"], start: new Date("2024-01-01") });
+```
+
+##### `alpaca.marketData.iterateOptionSnapshots`
+
+Lazily yield `{ symbol, value }` option-snapshot records across symbols and pages.
+
+```ts
+for await (const { symbol, value } of alpaca.marketData.iterateOptionSnapshots({ symbols: ["AAPL250117C00150000"] })) console.log(symbol, value);
+```
+
+##### `alpaca.marketData.collectOptionSnapshotsBySymbol`
+
+Collect option snapshots into a `{ [symbol]: OptionSnapshot }` map.
+
+```ts
+const bySymbol = await alpaca.marketData.collectOptionSnapshotsBySymbol({ symbols: ["AAPL250117C00150000"] });
+```
+
+##### `alpaca.marketData.iterateOptionChain`
+
+Lazily yield an underlying's option-chain snapshots across symbols and pages.
+
+```ts
+for await (const { symbol, value } of alpaca.marketData.iterateOptionChain({ underlyingSymbol: "AAPL" })) console.log(symbol, value);
+```
+
+##### `alpaca.marketData.collectOptionChainBySymbol`
+
+Collect an option chain's snapshots into a `{ [symbol]: OptionSnapshot }` map.
+
+```ts
+const chain = await alpaca.marketData.collectOptionChainBySymbol({ underlyingSymbol: "AAPL" });
+```
+
+##### `alpaca.marketData.iterateStockBarSingle`
+
+Lazily yield a single symbol's stock bars across all pages.
+
+```ts
+for await (const bar of alpaca.marketData.iterateStockBarSingle({ symbol: "AAPL", timeframe: "1Day", start: new Date("2024-01-01") })) console.log(bar.c);
+```
+
+##### `alpaca.marketData.collectStockBarSingle`
+
+Collect a single symbol's stock bars into one `StockBar[]` array.
+
+```ts
+const bars = await alpaca.marketData.collectStockBarSingle({ symbol: "AAPL", timeframe: "1Day", start: new Date("2024-01-01") });
+```
+
+##### `alpaca.marketData.iterateStockTradeSingle`
+
+Lazily yield a single symbol's stock trades across all pages.
+
+```ts
+for await (const trade of alpaca.marketData.iterateStockTradeSingle({ symbol: "AAPL", start: new Date("2024-01-02") })) console.log(trade.p);
+```
+
+##### `alpaca.marketData.collectStockTradeSingle`
+
+Collect a single symbol's stock trades into one `StockTrade[]` array.
+
+```ts
+const trades = await alpaca.marketData.collectStockTradeSingle({ symbol: "AAPL", start: new Date("2024-01-02") });
+```
+
+##### `alpaca.marketData.iterateStockQuoteSingle`
+
+Lazily yield a single symbol's stock quotes across all pages.
+
+```ts
+for await (const quote of alpaca.marketData.iterateStockQuoteSingle({ symbol: "AAPL", start: new Date("2024-01-02") })) console.log(quote.bp);
+```
+
+##### `alpaca.marketData.collectStockQuoteSingle`
+
+Collect a single symbol's stock quotes into one `StockQuote[]` array.
+
+```ts
+const quotes = await alpaca.marketData.collectStockQuoteSingle({ symbol: "AAPL", start: new Date("2024-01-02") });
+```
+
+##### `alpaca.marketData.iterateStockAuctionSingle`
+
+Lazily yield a single symbol's daily auctions across all pages.
+
+```ts
+for await (const auction of alpaca.marketData.iterateStockAuctionSingle({ symbol: "AAPL", start: new Date("2024-01-02") })) console.log(auction.d);
+```
+
+##### `alpaca.marketData.collectStockAuctionSingle`
+
+Collect a single symbol's daily auctions into one array.
+
+```ts
+const auctions = await alpaca.marketData.collectStockAuctionSingle({ symbol: "AAPL", start: new Date("2024-01-02") });
+```
+
+##### `alpaca.marketData.iterateNews`
+
+Lazily yield news articles across all pages.
+
+```ts
+for await (const article of alpaca.marketData.iterateNews({ symbols: ["AAPL"] })) console.log(article.headline);
+```
+
+##### `alpaca.marketData.collectNews`
+
+Collect news articles into one `News[]` array.
+
+```ts
+const articles = await alpaca.marketData.collectNews({ symbols: ["AAPL"] });
+```
+
+##### `alpaca.marketData.iterateCorporateActionsPages`
+
+Lazily yield each page's `CorporateActions` envelope, following the token.
+
+```ts
+for await (const page of alpaca.marketData.iterateCorporateActionsPages({ symbols: ["AAPL"] })) console.log(page.cashDividends);
+```
+
+##### `alpaca.marketData.collectCorporateActions`
+
+Collect corporate actions across pages into one merged `CorporateActions` object.
+
+```ts
+const actions = await alpaca.marketData.collectCorporateActions({ symbols: ["AAPL"], start: new Date("2024-01-01") });
+```
+
+<!-- API-REFERENCE:END -->
 
