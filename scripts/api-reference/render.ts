@@ -7,6 +7,10 @@
  * writer (`scripts/gen-api-reference.ts`) and the drift guard
  * (`test/api-reference.test.ts`) both call into here, so the generated output
  * and the test can never disagree.
+ *
+ * Examples are authored as compact one-liners in `examples.ts`; this module
+ * pretty-prints any that exceed {@link MAX_WIDTH} into a multi-line form so the
+ * rendered code blocks never need horizontal scrolling.
  */
 
 import {
@@ -22,6 +26,9 @@ import { examples } from "./examples.ts";
 export const START_MARKER = "<!-- API-REFERENCE:START -->";
 /** Closing marker that fences the generated block in the README. */
 export const END_MARKER = "<!-- API-REFERENCE:END -->";
+
+/** Wrap examples whose single-line form is wider than this many columns. */
+const MAX_WIDTH = 76;
 
 /** Human-readable label for each ergonomic helper kind, used in subheadings. */
 const KIND_LABELS: Record<ErgonomicHelperEntry["kind"], string> = {
@@ -48,6 +55,103 @@ export function referenceKeys(): string[] {
     return keys;
 }
 
+// --- Example pretty-printing ---------------------------------------------
+
+/** Find the index of the `}` matching the `{` at `start`, ignoring strings. */
+function matchingBrace(code: string, start: number): number {
+    let depth = 0;
+    let quote = "";
+    for (let i = start; i < code.length; i++) {
+        const ch = code[i];
+        if (quote) {
+            if (ch === "\\") i++;
+            else if (ch === quote) quote = "";
+            continue;
+        }
+        if (ch === "'" || ch === '"' || ch === "`") quote = ch;
+        else if (ch === "{") depth++;
+        else if (ch === "}" && --depth === 0) return i;
+    }
+    return -1;
+}
+
+/** Split object-literal contents on top-level commas, ignoring nesting/strings. */
+function splitTopLevel(inner: string): string[] {
+    const parts: string[] = [];
+    let depth = 0;
+    let quote = "";
+    let start = 0;
+    for (let i = 0; i < inner.length; i++) {
+        const ch = inner[i];
+        if (quote) {
+            if (ch === "\\") i++;
+            else if (ch === quote) quote = "";
+            continue;
+        }
+        if (ch === "'" || ch === '"' || ch === "`") quote = ch;
+        else if (ch === "{" || ch === "[" || ch === "(") depth++;
+        else if (ch === "}" || ch === "]" || ch === ")") depth--;
+        else if (ch === "," && depth === 0) {
+            parts.push(inner.slice(start, i).trim());
+            start = i + 1;
+        }
+    }
+    const last = inner.slice(start).trim();
+    if (last) parts.push(last);
+    return parts;
+}
+
+/** Expand an object literal `{...}` onto multiple lines, recursing as needed. */
+function expandObject(objText: string, baseIndent: number): string {
+    const inner = objText.slice(1, -1).trim();
+    const childPad = " ".repeat(baseIndent + 2);
+    const lines = splitTopLevel(inner).map((prop) => {
+        const oneLine = `${childPad}${prop},`;
+        if (oneLine.length <= MAX_WIDTH) return oneLine;
+        const objValue = prop.match(/^([\w$]+):\s*(\{[\s\S]*\})$/);
+        if (objValue) {
+            return `${childPad}${objValue[1]}: ${expandObject(objValue[2], baseIndent + 2)},`;
+        }
+        return oneLine;
+    });
+    return `{\n${lines.join("\n")}\n${" ".repeat(baseIndent)}}`;
+}
+
+/**
+ * Pretty-print a one-line example into a readable multi-line form when it is
+ * wider than {@link MAX_WIDTH}. Examples that are already multi-line, short, or
+ * carry no object argument are returned unchanged.
+ */
+function formatExample(code: string): string {
+    if (code.includes("\n") || code.length <= MAX_WIDTH) return code;
+    const callStart = code.indexOf("({");
+    if (callStart === -1) return code;
+    const braceStart = callStart + 1;
+    const braceEnd = matchingBrace(code, braceStart);
+    if (braceEnd === -1) return code;
+    const head = code.slice(0, braceStart);
+    const objText = code.slice(braceStart, braceEnd + 1);
+    const tail = code.slice(braceEnd + 1);
+    return `${head}${expandObject(objText, 0)}${tail}`;
+}
+
+// --- Anchors -------------------------------------------------------------
+
+/** GitHub-compatible heading slug (strips backticks/dots, lowercases, etc.). */
+function slugify(text: string): string {
+    return text
+        .toLowerCase()
+        .replace(/[^a-z0-9 -]/g, "")
+        .replace(/ /g, "-");
+}
+
+/** In-page anchor for a REST `accessor.method` heading. */
+function anchorFor(key: string): string {
+    return `#${slugify(`alpaca.${key}`)}`;
+}
+
+// --- Markdown blocks -----------------------------------------------------
+
 function lookup(key: string): { description: string; example: string } {
     const entry = examples[key];
     if (!entry) {
@@ -60,11 +164,26 @@ function lookup(key: string): { description: string; example: string } {
 
 function methodBlock(key: string): string[] {
     const { description, example } = lookup(key);
-    return [`##### \`alpaca.${key}\``, "", description, "", "```ts", example, "```", ""];
+    return [`##### \`alpaca.${key}\``, "", description, "", "```ts", formatExample(example), "```", ""];
+}
+
+/** Collapsible "jump to an operation" index for a REST group. */
+function operationsIndex(entries: readonly CapabilityEntry[]): string[] {
+    const total = entries.reduce((n, e) => n + e.methods.length, 0);
+    const lines = ["<details>", `<summary><strong>Operations</strong> (${total})</summary>`, ""];
+    for (const entry of entries) {
+        const name = entry.accessor.split(".")[1];
+        const links = entry.methods
+            .map((m) => `[${m}](${anchorFor(`${entry.accessor}.${m}`)})`)
+            .join(", ");
+        lines.push(`- \`${name}\` — ${links}`);
+    }
+    lines.push("", "</details>", "");
+    return lines;
 }
 
 function restGroup(title: string, entries: readonly CapabilityEntry[]): string[] {
-    const lines: string[] = [`### ${title}`, ""];
+    const lines: string[] = [`### ${title}`, "", ...operationsIndex(entries)];
     for (const entry of entries) {
         lines.push(`#### \`alpaca.${entry.accessor}\` — ${entry.api}`, "", entry.summary, "");
         for (const method of entry.methods) {
@@ -84,7 +203,7 @@ function streamingGroup(): string[] {
             description,
             "",
             "```ts",
-            example,
+            formatExample(example),
             "```",
             "",
         );

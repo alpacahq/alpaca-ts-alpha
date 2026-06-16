@@ -632,6 +632,28 @@ paths, so every entry is individually anchor-linkable.
 
 ### Trading API
 
+<details>
+<summary><strong>Operations</strong> (64)</summary>
+
+- `account` — [getAccount](#alpacatradingaccountgetaccount)
+- `accountActivities` — [getAccountActivities](#alpacatradingaccountactivitiesgetaccountactivities), [getAccountActivitiesByActivityType](#alpacatradingaccountactivitiesgetaccountactivitiesbyactivitytype)
+- `accountConfigurations` — [getAccountConfig](#alpacatradingaccountconfigurationsgetaccountconfig), [patchAccountConfig](#alpacatradingaccountconfigurationspatchaccountconfig)
+- `assets` — [getV2Assets](#alpacatradingassetsgetv2assets), [getV2AssetsSymbolOrAssetId](#alpacatradingassetsgetv2assetssymbolorassetid), [getOptionsContracts](#alpacatradingassetsgetoptionscontracts), [getOptionContractSymbolOrId](#alpacatradingassetsgetoptioncontractsymbolorid), [usCorporates](#alpacatradingassetsuscorporates), [usTreasuries](#alpacatradingassetsustreasuries)
+- `calendar` — [calendar](#alpacatradingcalendarcalendar), [clock](#alpacatradingcalendarclock), [legacyCalendar](#alpacatradingcalendarlegacycalendar), [legacyClock](#alpacatradingcalendarlegacyclock)
+- `corporateActions` — [getV2CorporateActionsAnnouncements](#alpacatradingcorporateactionsgetv2corporateactionsannouncements), [getV2CorporateActionsAnnouncementsId](#alpacatradingcorporateactionsgetv2corporateactionsannouncementsid)
+- `cryptoFunding` — [createCryptoTransferForAccount](#alpacatradingcryptofundingcreatecryptotransferforaccount), [getCryptoFundingTransfer](#alpacatradingcryptofundinggetcryptofundingtransfer), [listCryptoFundingTransfers](#alpacatradingcryptofundinglistcryptofundingtransfers), [getCryptoTransferEstimate](#alpacatradingcryptofundinggetcryptotransferestimate), [listCryptoFundingWallets](#alpacatradingcryptofundinglistcryptofundingwallets), [createWhitelistedAddress](#alpacatradingcryptofundingcreatewhitelistedaddress), [deleteWhitelistedAddress](#alpacatradingcryptofundingdeletewhitelistedaddress), [listWhitelistedAddress](#alpacatradingcryptofundinglistwhitelistedaddress)
+- `cryptoPerpetualsAccountVitals` — [getCryptoPerpAccountVitals](#alpacatradingcryptoperpetualsaccountvitalsgetcryptoperpaccountvitals)
+- `cryptoPerpetualsFunding` — [createCryptoPerpTransferForAccount](#alpacatradingcryptoperpetualsfundingcreatecryptoperptransferforaccount), [getCryptoPerpFundingTransfer](#alpacatradingcryptoperpetualsfundinggetcryptoperpfundingtransfer), [getCryptoPerpTransferEstimate](#alpacatradingcryptoperpetualsfundinggetcryptoperptransferestimate), [listCryptoPerpFundingTransfers](#alpacatradingcryptoperpetualsfundinglistcryptoperpfundingtransfers), [listCryptoPerpFundingWallets](#alpacatradingcryptoperpetualsfundinglistcryptoperpfundingwallets), [createWhitelistedPerpAddress](#alpacatradingcryptoperpetualsfundingcreatewhitelistedperpaddress), [deleteWhitelistedPerpAddress](#alpacatradingcryptoperpetualsfundingdeletewhitelistedperpaddress), [listWhitelistedPerpAddress](#alpacatradingcryptoperpetualsfundinglistwhitelistedperpaddress)
+- `cryptoPerpetualsLeverage` — [getCryptoPerpAccountLeverage](#alpacatradingcryptoperpetualsleveragegetcryptoperpaccountleverage), [setCryptoPerpAccountLeverage](#alpacatradingcryptoperpetualsleveragesetcryptoperpaccountleverage)
+- `events` — [subscribeToActivitiesSSE](#alpacatradingeventssubscribetoactivitiessse)
+- `orders` — [getAllOrders](#alpacatradingordersgetallorders), [postOrder](#alpacatradingorderspostorder), [getOrderByOrderID](#alpacatradingordersgetorderbyorderid), [getOrderByClientOrderId](#alpacatradingordersgetorderbyclientorderid), [patchOrderByOrderId](#alpacatradingorderspatchorderbyorderid), [deleteOrderByOrderID](#alpacatradingordersdeleteorderbyorderid), [deleteAllOrders](#alpacatradingordersdeleteallorders)
+- `portfolioHistory` — [getAccountPortfolioHistory](#alpacatradingportfoliohistorygetaccountportfoliohistory)
+- `positions` — [getAllOpenPositions](#alpacatradingpositionsgetallopenpositions), [getOpenPosition](#alpacatradingpositionsgetopenposition), [deleteAllOpenPositions](#alpacatradingpositionsdeleteallopenpositions), [deleteOpenPosition](#alpacatradingpositionsdeleteopenposition), [optionExercise](#alpacatradingpositionsoptionexercise), [optionDoNotExercise](#alpacatradingpositionsoptiondonotexercise)
+- `tokenization` — [getTokenizationRequests](#alpacatradingtokenizationgettokenizationrequests), [postTokenizationMint](#alpacatradingtokenizationposttokenizationmint)
+- `watchlists` — [getWatchlists](#alpacatradingwatchlistsgetwatchlists), [getWatchlistById](#alpacatradingwatchlistsgetwatchlistbyid), [getWatchlistByName](#alpacatradingwatchlistsgetwatchlistbyname), [postWatchlist](#alpacatradingwatchlistspostwatchlist), [updateWatchlistById](#alpacatradingwatchlistsupdatewatchlistbyid), [updateWatchlistByName](#alpacatradingwatchlistsupdatewatchlistbyname), [addAssetToWatchlist](#alpacatradingwatchlistsaddassettowatchlist), [addAssetToWatchlistByName](#alpacatradingwatchlistsaddassettowatchlistbyname), [removeAssetFromWatchlist](#alpacatradingwatchlistsremoveassetfromwatchlist), [deleteWatchlistById](#alpacatradingwatchlistsdeletewatchlistbyid), [deleteWatchlistByName](#alpacatradingwatchlistsdeletewatchlistbyname)
+
+</details>
+
 #### `alpaca.trading.account` — AccountsApi
 
 Account details, balances, buying power and status.
@@ -653,7 +675,10 @@ Account activity history (fills, fees, dividends, transfers).
 List account activities (fills, fees, dividends, transfers), newest first.
 
 ```ts
-await alpaca.trading.accountActivities.getAccountActivities({ activityTypes: ["FILL"], pageSize: 50 });
+await alpaca.trading.accountActivities.getAccountActivities({
+  activityTypes: ["FILL"],
+  pageSize: 50,
+});
 ```
 
 ##### `alpaca.trading.accountActivities.getAccountActivitiesByActivityType`
@@ -661,7 +686,9 @@ await alpaca.trading.accountActivities.getAccountActivities({ activityTypes: ["F
 List activities of a single type (e.g. only fills).
 
 ```ts
-await alpaca.trading.accountActivities.getAccountActivitiesByActivityType({ activityType: "FILL" });
+await alpaca.trading.accountActivities.getAccountActivitiesByActivityType({
+  activityType: "FILL",
+});
 ```
 
 #### `alpaca.trading.accountConfigurations` — AccountConfigurationsApi
@@ -681,7 +708,9 @@ await alpaca.trading.accountConfigurations.getAccountConfig();
 Update trading configuration (e.g. block short selling).
 
 ```ts
-await alpaca.trading.accountConfigurations.patchAccountConfig({ accountConfigurations: { noShorting: true } });
+await alpaca.trading.accountConfigurations.patchAccountConfig({
+  accountConfigurations: { noShorting: true },
+});
 ```
 
 #### `alpaca.trading.assets` — AssetsApi
@@ -693,7 +722,10 @@ Tradable assets, option contracts and instrument reference data.
 List tradable assets, filterable by class, status and exchange.
 
 ```ts
-await alpaca.trading.assets.getV2Assets({ status: "active", assetClass: "us_equity" });
+await alpaca.trading.assets.getV2Assets({
+  status: "active",
+  assetClass: "us_equity",
+});
 ```
 
 ##### `alpaca.trading.assets.getV2AssetsSymbolOrAssetId`
@@ -701,7 +733,9 @@ await alpaca.trading.assets.getV2Assets({ status: "active", assetClass: "us_equi
 Fetch a single asset by symbol or asset id.
 
 ```ts
-await alpaca.trading.assets.getV2AssetsSymbolOrAssetId({ symbolOrAssetId: "AAPL" });
+await alpaca.trading.assets.getV2AssetsSymbolOrAssetId({
+  symbolOrAssetId: "AAPL",
+});
 ```
 
 ##### `alpaca.trading.assets.getOptionsContracts`
@@ -709,7 +743,10 @@ await alpaca.trading.assets.getV2AssetsSymbolOrAssetId({ symbolOrAssetId: "AAPL"
 List option contracts for underlying symbols (paginated).
 
 ```ts
-await alpaca.trading.assets.getOptionsContracts({ underlyingSymbols: "AAPL", limit: 100 });
+await alpaca.trading.assets.getOptionsContracts({
+  underlyingSymbols: "AAPL",
+  limit: 100,
+});
 ```
 
 ##### `alpaca.trading.assets.getOptionContractSymbolOrId`
@@ -717,7 +754,9 @@ await alpaca.trading.assets.getOptionsContracts({ underlyingSymbols: "AAPL", lim
 Fetch a single option contract by symbol or id.
 
 ```ts
-await alpaca.trading.assets.getOptionContractSymbolOrId({ symbolOrId: "AAPL250117C00150000" });
+await alpaca.trading.assets.getOptionContractSymbolOrId({
+  symbolOrId: "AAPL250117C00150000",
+});
 ```
 
 ##### `alpaca.trading.assets.usCorporates`
@@ -745,7 +784,11 @@ Market calendar and clock (open/close, sessions).
 Market calendar (sessions) for a market and date range.
 
 ```ts
-await alpaca.trading.calendar.calendar({ market: "us_equity", start: new Date("2024-01-01"), end: new Date("2024-01-31") });
+await alpaca.trading.calendar.calendar({
+  market: "us_equity",
+  start: new Date("2024-01-01"),
+  end: new Date("2024-01-31"),
+});
 ```
 
 ##### `alpaca.trading.calendar.clock`
@@ -761,7 +804,10 @@ await alpaca.trading.calendar.clock();
 Legacy market-calendar endpoint (prefer `calendar`).
 
 ```ts
-await alpaca.trading.calendar.legacyCalendar({ start: new Date("2024-01-01"), end: new Date("2024-01-31") });
+await alpaca.trading.calendar.legacyCalendar({
+  start: new Date("2024-01-01"),
+  end: new Date("2024-01-31"),
+});
 ```
 
 ##### `alpaca.trading.calendar.legacyClock`
@@ -781,7 +827,11 @@ Corporate-action announcements (splits, dividends, mergers).
 Deprecated: corporate-action announcements over a date range.
 
 ```ts
-await alpaca.trading.corporateActions.getV2CorporateActionsAnnouncements({ caTypes: "dividend", since: "2024-01-01", until: "2024-01-31" });
+await alpaca.trading.corporateActions.getV2CorporateActionsAnnouncements({
+  caTypes: "dividend",
+  since: "2024-01-01",
+  until: "2024-01-31",
+});
 ```
 
 ##### `alpaca.trading.corporateActions.getV2CorporateActionsAnnouncementsId`
@@ -789,7 +839,9 @@ await alpaca.trading.corporateActions.getV2CorporateActionsAnnouncements({ caTyp
 Deprecated: a single corporate-action announcement by id.
 
 ```ts
-await alpaca.trading.corporateActions.getV2CorporateActionsAnnouncementsId({ id: "be3c368a-4c7c-4384-808e-f02c9f5a8afe" });
+await alpaca.trading.corporateActions.getV2CorporateActionsAnnouncementsId({
+  id: "be3c368a-4c7c-4384-808e-f02c9f5a8afe",
+});
 ```
 
 #### `alpaca.trading.cryptoFunding` — CryptoFundingApi
@@ -801,7 +853,13 @@ Crypto wallets, transfers and whitelisted withdrawal addresses.
 Initiate a crypto withdrawal/transfer for the account.
 
 ```ts
-await alpaca.trading.cryptoFunding.createCryptoTransferForAccount({ createCryptoTransferRequest: { amount: "0.5", address: "0xabc...", asset: "ETH" } });
+await alpaca.trading.cryptoFunding.createCryptoTransferForAccount({
+  createCryptoTransferRequest: {
+    amount: "0.5",
+    address: "0xabc...",
+    asset: "ETH",
+  },
+});
 ```
 
 ##### `alpaca.trading.cryptoFunding.getCryptoFundingTransfer`
@@ -809,7 +867,9 @@ await alpaca.trading.cryptoFunding.createCryptoTransferForAccount({ createCrypto
 Fetch a single crypto transfer by id.
 
 ```ts
-await alpaca.trading.cryptoFunding.getCryptoFundingTransfer({ transferId: "f1...e9" });
+await alpaca.trading.cryptoFunding.getCryptoFundingTransfer({
+  transferId: "f1...e9",
+});
 ```
 
 ##### `alpaca.trading.cryptoFunding.listCryptoFundingTransfers`
@@ -825,7 +885,12 @@ await alpaca.trading.cryptoFunding.listCryptoFundingTransfers();
 Estimate fees for a crypto transfer.
 
 ```ts
-await alpaca.trading.cryptoFunding.getCryptoTransferEstimate({ asset: "ETH", fromAddress: "0xabc...", toAddress: "0xdef...", amount: "0.5" });
+await alpaca.trading.cryptoFunding.getCryptoTransferEstimate({
+  asset: "ETH",
+  fromAddress: "0xabc...",
+  toAddress: "0xdef...",
+  amount: "0.5",
+});
 ```
 
 ##### `alpaca.trading.cryptoFunding.listCryptoFundingWallets`
@@ -833,7 +898,9 @@ await alpaca.trading.cryptoFunding.getCryptoTransferEstimate({ asset: "ETH", fro
 List the account's crypto wallets.
 
 ```ts
-await alpaca.trading.cryptoFunding.listCryptoFundingWallets({ asset: "ETH" });
+await alpaca.trading.cryptoFunding.listCryptoFundingWallets({
+  asset: "ETH",
+});
 ```
 
 ##### `alpaca.trading.cryptoFunding.createWhitelistedAddress`
@@ -841,7 +908,9 @@ await alpaca.trading.cryptoFunding.listCryptoFundingWallets({ asset: "ETH" });
 Whitelist a crypto withdrawal address.
 
 ```ts
-await alpaca.trading.cryptoFunding.createWhitelistedAddress({ createWhitelistedAddressRequest: { address: "0xabc...", asset: "ETH" } });
+await alpaca.trading.cryptoFunding.createWhitelistedAddress({
+  createWhitelistedAddressRequest: { address: "0xabc...", asset: "ETH" },
+});
 ```
 
 ##### `alpaca.trading.cryptoFunding.deleteWhitelistedAddress`
@@ -849,7 +918,9 @@ await alpaca.trading.cryptoFunding.createWhitelistedAddress({ createWhitelistedA
 Remove a whitelisted crypto address.
 
 ```ts
-await alpaca.trading.cryptoFunding.deleteWhitelistedAddress({ whitelistedAddressId: "a1...c2" });
+await alpaca.trading.cryptoFunding.deleteWhitelistedAddress({
+  whitelistedAddressId: "a1...c2",
+});
 ```
 
 ##### `alpaca.trading.cryptoFunding.listWhitelistedAddress`
@@ -881,7 +952,9 @@ Crypto perpetual-futures wallets and transfers (beta).
 Initiate a crypto perpetual-futures transfer (beta).
 
 ```ts
-await alpaca.trading.cryptoPerpetualsFunding.createCryptoPerpTransferForAccount({ createCryptoTransferRequest: { amount: "100", asset: "USDT" } });
+await alpaca.trading.cryptoPerpetualsFunding.createCryptoPerpTransferForAccount({
+  createCryptoTransferRequest: { amount: "100", asset: "USDT" },
+});
 ```
 
 ##### `alpaca.trading.cryptoPerpetualsFunding.getCryptoPerpFundingTransfer`
@@ -889,7 +962,9 @@ await alpaca.trading.cryptoPerpetualsFunding.createCryptoPerpTransferForAccount(
 Fetch a single perpetual-futures transfer by id (beta).
 
 ```ts
-await alpaca.trading.cryptoPerpetualsFunding.getCryptoPerpFundingTransfer({ transferId: "f1...e9" });
+await alpaca.trading.cryptoPerpetualsFunding.getCryptoPerpFundingTransfer({
+  transferId: "f1...e9",
+});
 ```
 
 ##### `alpaca.trading.cryptoPerpetualsFunding.getCryptoPerpTransferEstimate`
@@ -897,7 +972,10 @@ await alpaca.trading.cryptoPerpetualsFunding.getCryptoPerpFundingTransfer({ tran
 Estimate fees for a perpetual-futures transfer (beta).
 
 ```ts
-await alpaca.trading.cryptoPerpetualsFunding.getCryptoPerpTransferEstimate({ asset: "USDT", amount: "100" });
+await alpaca.trading.cryptoPerpetualsFunding.getCryptoPerpTransferEstimate({
+  asset: "USDT",
+  amount: "100",
+});
 ```
 
 ##### `alpaca.trading.cryptoPerpetualsFunding.listCryptoPerpFundingTransfers`
@@ -913,7 +991,9 @@ await alpaca.trading.cryptoPerpetualsFunding.listCryptoPerpFundingTransfers();
 List perpetual-futures wallets (beta).
 
 ```ts
-await alpaca.trading.cryptoPerpetualsFunding.listCryptoPerpFundingWallets({ asset: "USDT" });
+await alpaca.trading.cryptoPerpetualsFunding.listCryptoPerpFundingWallets({
+  asset: "USDT",
+});
 ```
 
 ##### `alpaca.trading.cryptoPerpetualsFunding.createWhitelistedPerpAddress`
@@ -921,7 +1001,12 @@ await alpaca.trading.cryptoPerpetualsFunding.listCryptoPerpFundingWallets({ asse
 Whitelist a perpetual-futures withdrawal address (beta).
 
 ```ts
-await alpaca.trading.cryptoPerpetualsFunding.createWhitelistedPerpAddress({ createWhitelistedPerpAddressRequest: { address: "0xabc...", asset: "USDT" } });
+await alpaca.trading.cryptoPerpetualsFunding.createWhitelistedPerpAddress({
+  createWhitelistedPerpAddressRequest: {
+    address: "0xabc...",
+    asset: "USDT",
+  },
+});
 ```
 
 ##### `alpaca.trading.cryptoPerpetualsFunding.deleteWhitelistedPerpAddress`
@@ -929,7 +1014,9 @@ await alpaca.trading.cryptoPerpetualsFunding.createWhitelistedPerpAddress({ crea
 Remove a whitelisted perpetual-futures address (beta).
 
 ```ts
-await alpaca.trading.cryptoPerpetualsFunding.deleteWhitelistedPerpAddress({ whitelistedAddressId: "a1...c2" });
+await alpaca.trading.cryptoPerpetualsFunding.deleteWhitelistedPerpAddress({
+  whitelistedAddressId: "a1...c2",
+});
 ```
 
 ##### `alpaca.trading.cryptoPerpetualsFunding.listWhitelistedPerpAddress`
@@ -949,7 +1036,9 @@ Read/set crypto perpetual-futures account leverage (beta).
 Read crypto perpetual-futures account leverage (beta).
 
 ```ts
-await alpaca.trading.cryptoPerpetualsLeverage.getCryptoPerpAccountLeverage({ symbol: "BTC-PERP" });
+await alpaca.trading.cryptoPerpetualsLeverage.getCryptoPerpAccountLeverage({
+  symbol: "BTC-PERP",
+});
 ```
 
 ##### `alpaca.trading.cryptoPerpetualsLeverage.setCryptoPerpAccountLeverage`
@@ -957,7 +1046,10 @@ await alpaca.trading.cryptoPerpetualsLeverage.getCryptoPerpAccountLeverage({ sym
 Set crypto perpetual-futures account leverage (beta).
 
 ```ts
-await alpaca.trading.cryptoPerpetualsLeverage.setCryptoPerpAccountLeverage({ symbol: "BTC-PERP", leverage: 5 });
+await alpaca.trading.cryptoPerpetualsLeverage.setCryptoPerpAccountLeverage({
+  symbol: "BTC-PERP",
+  leverage: 5,
+});
 ```
 
 #### `alpaca.trading.events` — EventsApi
@@ -969,7 +1061,9 @@ Server-sent event streams for account activity.
 Server-sent event stream of account activities.
 
 ```ts
-await alpaca.trading.events.subscribeToActivitiesSSE({ sinceId: "20240101000000000::..." });
+await alpaca.trading.events.subscribeToActivitiesSSE({
+  sinceId: "20240101000000000::...",
+});
 ```
 
 #### `alpaca.trading.orders` — OrdersApi
@@ -989,7 +1083,15 @@ await alpaca.trading.orders.getAllOrders({ status: "open", limit: 100 });
 Place an order (raw). Prefer the typed builders under Ergonomic helpers.
 
 ```ts
-await alpaca.trading.orders.postOrder({ postOrderRequest: { symbol: "AAPL", qty: "1", side: "buy", type: "market", timeInForce: "day" } });
+await alpaca.trading.orders.postOrder({
+  postOrderRequest: {
+    symbol: "AAPL",
+    qty: "1",
+    side: "buy",
+    type: "market",
+    timeInForce: "day",
+  },
+});
 ```
 
 ##### `alpaca.trading.orders.getOrderByOrderID`
@@ -1005,7 +1107,9 @@ await alpaca.trading.orders.getOrderByOrderID({ orderId: "f1...e9" });
 Fetch a single order by your client order id.
 
 ```ts
-await alpaca.trading.orders.getOrderByClientOrderId({ clientOrderId: "my-order-1" });
+await alpaca.trading.orders.getOrderByClientOrderId({
+  clientOrderId: "my-order-1",
+});
 ```
 
 ##### `alpaca.trading.orders.patchOrderByOrderId`
@@ -1013,7 +1117,10 @@ await alpaca.trading.orders.getOrderByClientOrderId({ clientOrderId: "my-order-1
 Replace (amend) an open order.
 
 ```ts
-await alpaca.trading.orders.patchOrderByOrderId({ orderId: "f1...e9", patchOrderRequest: { qty: "2" } });
+await alpaca.trading.orders.patchOrderByOrderId({
+  orderId: "f1...e9",
+  patchOrderRequest: { qty: "2" },
+});
 ```
 
 ##### `alpaca.trading.orders.deleteOrderByOrderID`
@@ -1041,7 +1148,10 @@ Time series of account equity / P&L.
 Time series of account equity and profit/loss.
 
 ```ts
-await alpaca.trading.portfolioHistory.getAccountPortfolioHistory({ period: "1M", timeframe: "1D" });
+await alpaca.trading.portfolioHistory.getAccountPortfolioHistory({
+  period: "1M",
+  timeframe: "1D",
+});
 ```
 
 #### `alpaca.trading.positions` — PositionsApi
@@ -1069,7 +1179,9 @@ await alpaca.trading.positions.getOpenPosition({ symbolOrAssetId: "AAPL" });
 Liquidate every open position (optionally cancel orders first).
 
 ```ts
-await alpaca.trading.positions.deleteAllOpenPositions({ cancelOrders: true });
+await alpaca.trading.positions.deleteAllOpenPositions({
+  cancelOrders: true,
+});
 ```
 
 ##### `alpaca.trading.positions.deleteOpenPosition`
@@ -1077,7 +1189,10 @@ await alpaca.trading.positions.deleteAllOpenPositions({ cancelOrders: true });
 Close a position: whole, partial qty, or a percentage.
 
 ```ts
-await alpaca.trading.positions.deleteOpenPosition({ symbolOrAssetId: "AAPL", percentage: 50 });
+await alpaca.trading.positions.deleteOpenPosition({
+  symbolOrAssetId: "AAPL",
+  percentage: 50,
+});
 ```
 
 ##### `alpaca.trading.positions.optionExercise`
@@ -1085,7 +1200,9 @@ await alpaca.trading.positions.deleteOpenPosition({ symbolOrAssetId: "AAPL", per
 Exercise a held option position.
 
 ```ts
-await alpaca.trading.positions.optionExercise({ symbolOrContractId: "AAPL250117C00150000" });
+await alpaca.trading.positions.optionExercise({
+  symbolOrContractId: "AAPL250117C00150000",
+});
 ```
 
 ##### `alpaca.trading.positions.optionDoNotExercise`
@@ -1093,7 +1210,9 @@ await alpaca.trading.positions.optionExercise({ symbolOrContractId: "AAPL250117C
 Submit a do-not-exercise instruction for an option position.
 
 ```ts
-await alpaca.trading.positions.optionDoNotExercise({ symbolOrContractId: "AAPL250117C00150000" });
+await alpaca.trading.positions.optionDoNotExercise({
+  symbolOrContractId: "AAPL250117C00150000",
+});
 ```
 
 #### `alpaca.trading.tokenization` — TokenizationApi
@@ -1105,7 +1224,9 @@ Tokenization requests and minting.
 List tokenization (mint/redeem) requests.
 
 ```ts
-await alpaca.trading.tokenization.getTokenizationRequests({ status: "completed" });
+await alpaca.trading.tokenization.getTokenizationRequests({
+  status: "completed",
+});
 ```
 
 ##### `alpaca.trading.tokenization.postTokenizationMint`
@@ -1113,7 +1234,9 @@ await alpaca.trading.tokenization.getTokenizationRequests({ status: "completed" 
 Submit a tokenization mint request.
 
 ```ts
-await alpaca.trading.tokenization.postTokenizationMint({ tokenizationMintRequest: { underlyingSymbol: "AAPL", quantity: "1" } });
+await alpaca.trading.tokenization.postTokenizationMint({
+  tokenizationMintRequest: { underlyingSymbol: "AAPL", quantity: "1" },
+});
 ```
 
 #### `alpaca.trading.watchlists` — WatchlistsApi
@@ -1133,7 +1256,9 @@ await alpaca.trading.watchlists.getWatchlists();
 Fetch a single watchlist by id.
 
 ```ts
-await alpaca.trading.watchlists.getWatchlistById({ watchlistId: "f1...e9" });
+await alpaca.trading.watchlists.getWatchlistById({
+  watchlistId: "f1...e9",
+});
 ```
 
 ##### `alpaca.trading.watchlists.getWatchlistByName`
@@ -1149,7 +1274,9 @@ await alpaca.trading.watchlists.getWatchlistByName({ name: "My List" });
 Create a watchlist with an initial set of symbols.
 
 ```ts
-await alpaca.trading.watchlists.postWatchlist({ updateWatchlistRequest: { name: "Tech", symbols: ["AAPL", "MSFT"] } });
+await alpaca.trading.watchlists.postWatchlist({
+  updateWatchlistRequest: { name: "Tech", symbols: ["AAPL", "MSFT"] },
+});
 ```
 
 ##### `alpaca.trading.watchlists.updateWatchlistById`
@@ -1157,7 +1284,10 @@ await alpaca.trading.watchlists.postWatchlist({ updateWatchlistRequest: { name: 
 Update a watchlist (name and/or symbols) by id.
 
 ```ts
-await alpaca.trading.watchlists.updateWatchlistById({ watchlistId: "f1...e9", updateWatchlistRequest: { name: "Renamed" } });
+await alpaca.trading.watchlists.updateWatchlistById({
+  watchlistId: "f1...e9",
+  updateWatchlistRequest: { name: "Renamed" },
+});
 ```
 
 ##### `alpaca.trading.watchlists.updateWatchlistByName`
@@ -1165,7 +1295,10 @@ await alpaca.trading.watchlists.updateWatchlistById({ watchlistId: "f1...e9", up
 Update a watchlist (name and/or symbols) by name.
 
 ```ts
-await alpaca.trading.watchlists.updateWatchlistByName({ name: "Tech", updateWatchlistRequest: { symbols: ["AAPL"] } });
+await alpaca.trading.watchlists.updateWatchlistByName({
+  name: "Tech",
+  updateWatchlistRequest: { symbols: ["AAPL"] },
+});
 ```
 
 ##### `alpaca.trading.watchlists.addAssetToWatchlist`
@@ -1173,7 +1306,10 @@ await alpaca.trading.watchlists.updateWatchlistByName({ name: "Tech", updateWatc
 Add an asset to a watchlist by id.
 
 ```ts
-await alpaca.trading.watchlists.addAssetToWatchlist({ watchlistId: "f1...e9", addAssetToWatchlistRequest: { symbol: "NVDA" } });
+await alpaca.trading.watchlists.addAssetToWatchlist({
+  watchlistId: "f1...e9",
+  addAssetToWatchlistRequest: { symbol: "NVDA" },
+});
 ```
 
 ##### `alpaca.trading.watchlists.addAssetToWatchlistByName`
@@ -1181,7 +1317,10 @@ await alpaca.trading.watchlists.addAssetToWatchlist({ watchlistId: "f1...e9", ad
 Add an asset to a watchlist by name.
 
 ```ts
-await alpaca.trading.watchlists.addAssetToWatchlistByName({ name: "Tech", addAssetToWatchlistRequest: { symbol: "NVDA" } });
+await alpaca.trading.watchlists.addAssetToWatchlistByName({
+  name: "Tech",
+  addAssetToWatchlistRequest: { symbol: "NVDA" },
+});
 ```
 
 ##### `alpaca.trading.watchlists.removeAssetFromWatchlist`
@@ -1189,7 +1328,10 @@ await alpaca.trading.watchlists.addAssetToWatchlistByName({ name: "Tech", addAss
 Remove an asset from a watchlist by id.
 
 ```ts
-await alpaca.trading.watchlists.removeAssetFromWatchlist({ watchlistId: "f1...e9", symbol: "NVDA" });
+await alpaca.trading.watchlists.removeAssetFromWatchlist({
+  watchlistId: "f1...e9",
+  symbol: "NVDA",
+});
 ```
 
 ##### `alpaca.trading.watchlists.deleteWatchlistById`
@@ -1197,7 +1339,9 @@ await alpaca.trading.watchlists.removeAssetFromWatchlist({ watchlistId: "f1...e9
 Delete a watchlist by id.
 
 ```ts
-await alpaca.trading.watchlists.deleteWatchlistById({ watchlistId: "f1...e9" });
+await alpaca.trading.watchlists.deleteWatchlistById({
+  watchlistId: "f1...e9",
+});
 ```
 
 ##### `alpaca.trading.watchlists.deleteWatchlistByName`
@@ -1210,6 +1354,23 @@ await alpaca.trading.watchlists.deleteWatchlistByName({ name: "Tech" });
 
 ### Market Data API
 
+<details>
+<summary><strong>Operations</strong> (42)</summary>
+
+- `stocks` — [stockBars](#alpacamarketdatastocksstockbars), [stockTrades](#alpacamarketdatastocksstocktrades), [stockQuotes](#alpacamarketdatastocksstockquotes), [stockAuctions](#alpacamarketdatastocksstockauctions), [stockSnapshots](#alpacamarketdatastocksstocksnapshots), [stockLatestBars](#alpacamarketdatastocksstocklatestbars), [stockLatestQuotes](#alpacamarketdatastocksstocklatestquotes), [stockLatestTrades](#alpacamarketdatastocksstocklatesttrades), [stockMetaConditions](#alpacamarketdatastocksstockmetaconditions), [stockMetaExchanges](#alpacamarketdatastocksstockmetaexchanges)
+- `crypto` — [cryptoBars](#alpacamarketdatacryptocryptobars), [cryptoTrades](#alpacamarketdatacryptocryptotrades), [cryptoQuotes](#alpacamarketdatacryptocryptoquotes), [cryptoSnapshots](#alpacamarketdatacryptocryptosnapshots), [cryptoLatestBars](#alpacamarketdatacryptocryptolatestbars), [cryptoLatestQuotes](#alpacamarketdatacryptocryptolatestquotes), [cryptoLatestTrades](#alpacamarketdatacryptocryptolatesttrades), [cryptoLatestOrderbooks](#alpacamarketdatacryptocryptolatestorderbooks)
+- `cryptoPerpetualFutures` — [cryptoPerpLatestBars](#alpacamarketdatacryptoperpetualfuturescryptoperplatestbars), [cryptoPerpLatestQuotes](#alpacamarketdatacryptoperpetualfuturescryptoperplatestquotes), [cryptoPerpLatestTrades](#alpacamarketdatacryptoperpetualfuturescryptoperplatesttrades), [cryptoPerpLatestOrderbooks](#alpacamarketdatacryptoperpetualfuturescryptoperplatestorderbooks), [cryptoPerpLatestFuturesPricing](#alpacamarketdatacryptoperpetualfuturescryptoperplatestfuturespricing)
+- `fixedIncome` — [fixedIncomeLatestPrices](#alpacamarketdatafixedincomefixedincomelatestprices), [fixedIncomeLatestQuotes](#alpacamarketdatafixedincomefixedincomelatestquotes)
+- `forex` — [rates](#alpacamarketdataforexrates), [latestRates](#alpacamarketdataforexlatestrates)
+- `indices` — [indexValues](#alpacamarketdataindicesindexvalues), [indexLatestValues](#alpacamarketdataindicesindexlatestvalues)
+- `logos` — [logos](#alpacamarketdatalogoslogos)
+- `news` — [news](#alpacamarketdatanewsnews)
+- `options` — [optionBars](#alpacamarketdataoptionsoptionbars), [optionTrades](#alpacamarketdataoptionsoptiontrades), [optionChain](#alpacamarketdataoptionsoptionchain), [optionSnapshots](#alpacamarketdataoptionsoptionsnapshots), [optionLatestQuotes](#alpacamarketdataoptionsoptionlatestquotes), [optionLatestTrades](#alpacamarketdataoptionsoptionlatesttrades), [optionMetaConditions](#alpacamarketdataoptionsoptionmetaconditions), [optionMetaExchanges](#alpacamarketdataoptionsoptionmetaexchanges)
+- `screener` — [mostActives](#alpacamarketdatascreenermostactives), [movers](#alpacamarketdatascreenermovers)
+- `corporateActions` — [corporateActions](#alpacamarketdatacorporateactionscorporateactions)
+
+</details>
+
 #### `alpaca.marketData.stocks` — StockApi
 
 US-equity bars, trades, quotes, auctions and snapshots.
@@ -1219,7 +1380,11 @@ US-equity bars, trades, quotes, auctions and snapshots.
 Historical bars for one or more stocks (paginated).
 
 ```ts
-await alpaca.marketData.stocks.stockBars({ symbols: "AAPL,MSFT", timeframe: "1Day", start: new Date("2024-01-01") });
+await alpaca.marketData.stocks.stockBars({
+  symbols: "AAPL,MSFT",
+  timeframe: "1Day",
+  start: new Date("2024-01-01"),
+});
 ```
 
 ##### `alpaca.marketData.stocks.stockTrades`
@@ -1227,7 +1392,10 @@ await alpaca.marketData.stocks.stockBars({ symbols: "AAPL,MSFT", timeframe: "1Da
 Historical trades for one or more stocks (paginated).
 
 ```ts
-await alpaca.marketData.stocks.stockTrades({ symbols: "AAPL", start: new Date("2024-01-02") });
+await alpaca.marketData.stocks.stockTrades({
+  symbols: "AAPL",
+  start: new Date("2024-01-02"),
+});
 ```
 
 ##### `alpaca.marketData.stocks.stockQuotes`
@@ -1235,7 +1403,10 @@ await alpaca.marketData.stocks.stockTrades({ symbols: "AAPL", start: new Date("2
 Historical quotes for one or more stocks (paginated).
 
 ```ts
-await alpaca.marketData.stocks.stockQuotes({ symbols: "AAPL", start: new Date("2024-01-02") });
+await alpaca.marketData.stocks.stockQuotes({
+  symbols: "AAPL",
+  start: new Date("2024-01-02"),
+});
 ```
 
 ##### `alpaca.marketData.stocks.stockAuctions`
@@ -1243,7 +1414,10 @@ await alpaca.marketData.stocks.stockQuotes({ symbols: "AAPL", start: new Date("2
 Historical opening/closing auctions for stocks (paginated).
 
 ```ts
-await alpaca.marketData.stocks.stockAuctions({ symbols: "AAPL", start: new Date("2024-01-02") });
+await alpaca.marketData.stocks.stockAuctions({
+  symbols: "AAPL",
+  start: new Date("2024-01-02"),
+});
 ```
 
 ##### `alpaca.marketData.stocks.stockSnapshots`
@@ -1283,7 +1457,10 @@ await alpaca.marketData.stocks.stockLatestTrades({ symbols: "AAPL,MSFT" });
 Trade/quote condition-code mappings for a tape.
 
 ```ts
-await alpaca.marketData.stocks.stockMetaConditions({ ticktype: "trade", tape: "A" });
+await alpaca.marketData.stocks.stockMetaConditions({
+  ticktype: "trade",
+  tape: "A",
+});
 ```
 
 ##### `alpaca.marketData.stocks.stockMetaExchanges`
@@ -1303,7 +1480,12 @@ Crypto bars, trades, quotes, orderbooks and snapshots.
 Historical crypto bars (paginated); `loc` selects the data region.
 
 ```ts
-await alpaca.marketData.crypto.cryptoBars({ loc: "us", symbols: "BTC/USD,ETH/USD", timeframe: "1Day", start: new Date("2024-01-01") });
+await alpaca.marketData.crypto.cryptoBars({
+  loc: "us",
+  symbols: "BTC/USD,ETH/USD",
+  timeframe: "1Day",
+  start: new Date("2024-01-01"),
+});
 ```
 
 ##### `alpaca.marketData.crypto.cryptoTrades`
@@ -1311,7 +1493,11 @@ await alpaca.marketData.crypto.cryptoBars({ loc: "us", symbols: "BTC/USD,ETH/USD
 Historical crypto trades (paginated).
 
 ```ts
-await alpaca.marketData.crypto.cryptoTrades({ loc: "us", symbols: "BTC/USD", start: new Date("2024-01-02") });
+await alpaca.marketData.crypto.cryptoTrades({
+  loc: "us",
+  symbols: "BTC/USD",
+  start: new Date("2024-01-02"),
+});
 ```
 
 ##### `alpaca.marketData.crypto.cryptoQuotes`
@@ -1319,7 +1505,11 @@ await alpaca.marketData.crypto.cryptoTrades({ loc: "us", symbols: "BTC/USD", sta
 Historical crypto quotes (paginated).
 
 ```ts
-await alpaca.marketData.crypto.cryptoQuotes({ loc: "us", symbols: "BTC/USD", start: new Date("2024-01-02") });
+await alpaca.marketData.crypto.cryptoQuotes({
+  loc: "us",
+  symbols: "BTC/USD",
+  start: new Date("2024-01-02"),
+});
 ```
 
 ##### `alpaca.marketData.crypto.cryptoSnapshots`
@@ -1327,7 +1517,10 @@ await alpaca.marketData.crypto.cryptoQuotes({ loc: "us", symbols: "BTC/USD", sta
 Latest snapshot for one or more crypto pairs.
 
 ```ts
-await alpaca.marketData.crypto.cryptoSnapshots({ loc: "us", symbols: "BTC/USD,ETH/USD" });
+await alpaca.marketData.crypto.cryptoSnapshots({
+  loc: "us",
+  symbols: "BTC/USD,ETH/USD",
+});
 ```
 
 ##### `alpaca.marketData.crypto.cryptoLatestBars`
@@ -1335,7 +1528,10 @@ await alpaca.marketData.crypto.cryptoSnapshots({ loc: "us", symbols: "BTC/USD,ET
 Latest bar for one or more crypto pairs.
 
 ```ts
-await alpaca.marketData.crypto.cryptoLatestBars({ loc: "us", symbols: "BTC/USD" });
+await alpaca.marketData.crypto.cryptoLatestBars({
+  loc: "us",
+  symbols: "BTC/USD",
+});
 ```
 
 ##### `alpaca.marketData.crypto.cryptoLatestQuotes`
@@ -1343,7 +1539,10 @@ await alpaca.marketData.crypto.cryptoLatestBars({ loc: "us", symbols: "BTC/USD" 
 Latest quote for one or more crypto pairs.
 
 ```ts
-await alpaca.marketData.crypto.cryptoLatestQuotes({ loc: "us", symbols: "BTC/USD" });
+await alpaca.marketData.crypto.cryptoLatestQuotes({
+  loc: "us",
+  symbols: "BTC/USD",
+});
 ```
 
 ##### `alpaca.marketData.crypto.cryptoLatestTrades`
@@ -1351,7 +1550,10 @@ await alpaca.marketData.crypto.cryptoLatestQuotes({ loc: "us", symbols: "BTC/USD
 Latest trade for one or more crypto pairs.
 
 ```ts
-await alpaca.marketData.crypto.cryptoLatestTrades({ loc: "us", symbols: "BTC/USD" });
+await alpaca.marketData.crypto.cryptoLatestTrades({
+  loc: "us",
+  symbols: "BTC/USD",
+});
 ```
 
 ##### `alpaca.marketData.crypto.cryptoLatestOrderbooks`
@@ -1359,7 +1561,10 @@ await alpaca.marketData.crypto.cryptoLatestTrades({ loc: "us", symbols: "BTC/USD
 Latest order book for one or more crypto pairs.
 
 ```ts
-await alpaca.marketData.crypto.cryptoLatestOrderbooks({ loc: "us", symbols: "BTC/USD" });
+await alpaca.marketData.crypto.cryptoLatestOrderbooks({
+  loc: "us",
+  symbols: "BTC/USD",
+});
 ```
 
 #### `alpaca.marketData.cryptoPerpetualFutures` — CryptoPerpetualFuturesApi
@@ -1371,7 +1576,10 @@ Crypto perpetual-futures latest market data.
 Latest bar for one or more crypto perpetual-futures contracts.
 
 ```ts
-await alpaca.marketData.cryptoPerpetualFutures.cryptoPerpLatestBars({ loc: "global", symbols: "BTC-PERP" });
+await alpaca.marketData.cryptoPerpetualFutures.cryptoPerpLatestBars({
+  loc: "global",
+  symbols: "BTC-PERP",
+});
 ```
 
 ##### `alpaca.marketData.cryptoPerpetualFutures.cryptoPerpLatestQuotes`
@@ -1379,7 +1587,10 @@ await alpaca.marketData.cryptoPerpetualFutures.cryptoPerpLatestBars({ loc: "glob
 Latest quote for one or more perpetual-futures contracts.
 
 ```ts
-await alpaca.marketData.cryptoPerpetualFutures.cryptoPerpLatestQuotes({ loc: "global", symbols: "BTC-PERP" });
+await alpaca.marketData.cryptoPerpetualFutures.cryptoPerpLatestQuotes({
+  loc: "global",
+  symbols: "BTC-PERP",
+});
 ```
 
 ##### `alpaca.marketData.cryptoPerpetualFutures.cryptoPerpLatestTrades`
@@ -1387,7 +1598,10 @@ await alpaca.marketData.cryptoPerpetualFutures.cryptoPerpLatestQuotes({ loc: "gl
 Latest trade for one or more perpetual-futures contracts.
 
 ```ts
-await alpaca.marketData.cryptoPerpetualFutures.cryptoPerpLatestTrades({ loc: "global", symbols: "BTC-PERP" });
+await alpaca.marketData.cryptoPerpetualFutures.cryptoPerpLatestTrades({
+  loc: "global",
+  symbols: "BTC-PERP",
+});
 ```
 
 ##### `alpaca.marketData.cryptoPerpetualFutures.cryptoPerpLatestOrderbooks`
@@ -1395,7 +1609,10 @@ await alpaca.marketData.cryptoPerpetualFutures.cryptoPerpLatestTrades({ loc: "gl
 Latest order book for one or more perpetual-futures contracts.
 
 ```ts
-await alpaca.marketData.cryptoPerpetualFutures.cryptoPerpLatestOrderbooks({ loc: "global", symbols: "BTC-PERP" });
+await alpaca.marketData.cryptoPerpetualFutures.cryptoPerpLatestOrderbooks({
+  loc: "global",
+  symbols: "BTC-PERP",
+});
 ```
 
 ##### `alpaca.marketData.cryptoPerpetualFutures.cryptoPerpLatestFuturesPricing`
@@ -1403,7 +1620,10 @@ await alpaca.marketData.cryptoPerpetualFutures.cryptoPerpLatestOrderbooks({ loc:
 Latest funding/mark pricing for perpetual-futures contracts.
 
 ```ts
-await alpaca.marketData.cryptoPerpetualFutures.cryptoPerpLatestFuturesPricing({ loc: "global", symbols: "BTC-PERP" });
+await alpaca.marketData.cryptoPerpetualFutures.cryptoPerpLatestFuturesPricing({
+  loc: "global",
+  symbols: "BTC-PERP",
+});
 ```
 
 #### `alpaca.marketData.fixedIncome` — FixedIncomeApi
@@ -1415,7 +1635,9 @@ Fixed-income latest prices and quotes.
 Latest fixed-income prices by ISIN.
 
 ```ts
-await alpaca.marketData.fixedIncome.fixedIncomeLatestPrices({ isins: "US0378331005" });
+await alpaca.marketData.fixedIncome.fixedIncomeLatestPrices({
+  isins: "US0378331005",
+});
 ```
 
 ##### `alpaca.marketData.fixedIncome.fixedIncomeLatestQuotes`
@@ -1423,7 +1645,10 @@ await alpaca.marketData.fixedIncome.fixedIncomeLatestPrices({ isins: "US03783310
 Latest fixed-income quotes by ISIN.
 
 ```ts
-await alpaca.marketData.fixedIncome.fixedIncomeLatestQuotes({ isins: "US0378331005", tradeSize: 100 });
+await alpaca.marketData.fixedIncome.fixedIncomeLatestQuotes({
+  isins: "US0378331005",
+  tradeSize: 100,
+});
 ```
 
 #### `alpaca.marketData.forex` — ForexApi
@@ -1435,7 +1660,11 @@ Foreign-exchange historical and latest rates.
 Historical forex rates for currency pairs (paginated).
 
 ```ts
-await alpaca.marketData.forex.rates({ currencyPairs: "EUR/USD", timeframe: "1Day", start: new Date("2024-01-01") });
+await alpaca.marketData.forex.rates({
+  currencyPairs: "EUR/USD",
+  timeframe: "1Day",
+  start: new Date("2024-01-01"),
+});
 ```
 
 ##### `alpaca.marketData.forex.latestRates`
@@ -1443,7 +1672,9 @@ await alpaca.marketData.forex.rates({ currencyPairs: "EUR/USD", timeframe: "1Day
 Latest forex rates for one or more currency pairs.
 
 ```ts
-await alpaca.marketData.forex.latestRates({ currencyPairs: "EUR/USD,GBP/USD" });
+await alpaca.marketData.forex.latestRates({
+  currencyPairs: "EUR/USD,GBP/USD",
+});
 ```
 
 #### `alpaca.marketData.indices` — IndexApi
@@ -1455,7 +1686,10 @@ Index historical and latest values.
 Historical index values (paginated).
 
 ```ts
-await alpaca.marketData.indices.indexValues({ symbols: "SPX", start: new Date("2024-01-01") });
+await alpaca.marketData.indices.indexValues({
+  symbols: "SPX",
+  start: new Date("2024-01-01"),
+});
 ```
 
 ##### `alpaca.marketData.indices.indexLatestValues`
@@ -1499,7 +1733,11 @@ Options bars, trades, chains and snapshots.
 Historical option bars (paginated).
 
 ```ts
-await alpaca.marketData.options.optionBars({ symbols: "AAPL250117C00150000", timeframe: "1Day", start: new Date("2024-01-01") });
+await alpaca.marketData.options.optionBars({
+  symbols: "AAPL250117C00150000",
+  timeframe: "1Day",
+  start: new Date("2024-01-01"),
+});
 ```
 
 ##### `alpaca.marketData.options.optionTrades`
@@ -1507,7 +1745,10 @@ await alpaca.marketData.options.optionBars({ symbols: "AAPL250117C00150000", tim
 Historical option trades (paginated).
 
 ```ts
-await alpaca.marketData.options.optionTrades({ symbols: "AAPL250117C00150000", start: new Date("2024-01-02") });
+await alpaca.marketData.options.optionTrades({
+  symbols: "AAPL250117C00150000",
+  start: new Date("2024-01-02"),
+});
 ```
 
 ##### `alpaca.marketData.options.optionChain`
@@ -1515,7 +1756,10 @@ await alpaca.marketData.options.optionTrades({ symbols: "AAPL250117C00150000", s
 Snapshots for an underlying's full option chain (paginated).
 
 ```ts
-await alpaca.marketData.options.optionChain({ underlyingSymbol: "AAPL", type: "call" });
+await alpaca.marketData.options.optionChain({
+  underlyingSymbol: "AAPL",
+  type: "call",
+});
 ```
 
 ##### `alpaca.marketData.options.optionSnapshots`
@@ -1523,7 +1767,9 @@ await alpaca.marketData.options.optionChain({ underlyingSymbol: "AAPL", type: "c
 Latest snapshots for one or more option contracts.
 
 ```ts
-await alpaca.marketData.options.optionSnapshots({ symbols: "AAPL250117C00150000" });
+await alpaca.marketData.options.optionSnapshots({
+  symbols: "AAPL250117C00150000",
+});
 ```
 
 ##### `alpaca.marketData.options.optionLatestQuotes`
@@ -1531,7 +1777,9 @@ await alpaca.marketData.options.optionSnapshots({ symbols: "AAPL250117C00150000"
 Latest quotes for one or more option contracts.
 
 ```ts
-await alpaca.marketData.options.optionLatestQuotes({ symbols: "AAPL250117C00150000" });
+await alpaca.marketData.options.optionLatestQuotes({
+  symbols: "AAPL250117C00150000",
+});
 ```
 
 ##### `alpaca.marketData.options.optionLatestTrades`
@@ -1539,7 +1787,9 @@ await alpaca.marketData.options.optionLatestQuotes({ symbols: "AAPL250117C001500
 Latest trades for one or more option contracts.
 
 ```ts
-await alpaca.marketData.options.optionLatestTrades({ symbols: "AAPL250117C00150000" });
+await alpaca.marketData.options.optionLatestTrades({
+  symbols: "AAPL250117C00150000",
+});
 ```
 
 ##### `alpaca.marketData.options.optionMetaConditions`
@@ -1587,7 +1837,11 @@ Historical corporate-action data.
 Historical corporate-action data by symbol and type (paginated).
 
 ```ts
-await alpaca.marketData.corporateActions.corporateActions({ symbols: "AAPL", types: "cash_dividend", start: new Date("2024-01-01") });
+await alpaca.marketData.corporateActions.corporateActions({
+  symbols: "AAPL",
+  types: "cash_dividend",
+  start: new Date("2024-01-01"),
+});
 ```
 
 ### Real-time streaming
@@ -1666,7 +1920,12 @@ await alpaca.trading.orders.market({ symbol: "AAPL", side: "buy", qty: 1 });
 Place a limit order.
 
 ```ts
-await alpaca.trading.orders.limit({ symbol: "AAPL", side: "buy", qty: 1, limitPrice: 150 });
+await alpaca.trading.orders.limit({
+  symbol: "AAPL",
+  side: "buy",
+  qty: 1,
+  limitPrice: 150,
+});
 ```
 
 ##### `alpaca.trading.orders.stop`
@@ -1674,7 +1933,12 @@ await alpaca.trading.orders.limit({ symbol: "AAPL", side: "buy", qty: 1, limitPr
 Place a stop (stop-market) order.
 
 ```ts
-await alpaca.trading.orders.stop({ symbol: "AAPL", side: "sell", qty: 1, stopPrice: 140 });
+await alpaca.trading.orders.stop({
+  symbol: "AAPL",
+  side: "sell",
+  qty: 1,
+  stopPrice: 140,
+});
 ```
 
 ##### `alpaca.trading.orders.stopLimit`
@@ -1682,7 +1946,13 @@ await alpaca.trading.orders.stop({ symbol: "AAPL", side: "sell", qty: 1, stopPri
 Place a stop-limit order.
 
 ```ts
-await alpaca.trading.orders.stopLimit({ symbol: "AAPL", side: "sell", qty: 1, stopPrice: 140, limitPrice: 139 });
+await alpaca.trading.orders.stopLimit({
+  symbol: "AAPL",
+  side: "sell",
+  qty: 1,
+  stopPrice: 140,
+  limitPrice: 139,
+});
 ```
 
 ##### `alpaca.trading.orders.trailingStop`
@@ -1690,7 +1960,12 @@ await alpaca.trading.orders.stopLimit({ symbol: "AAPL", side: "sell", qty: 1, st
 Place a trailing-stop order (one of `trailPrice`/`trailPercent`).
 
 ```ts
-await alpaca.trading.orders.trailingStop({ symbol: "AAPL", side: "sell", qty: 1, trailPercent: 5 });
+await alpaca.trading.orders.trailingStop({
+  symbol: "AAPL",
+  side: "sell",
+  qty: 1,
+  trailPercent: 5,
+});
 ```
 
 ##### `alpaca.trading.orders.bracket`
@@ -1698,7 +1973,13 @@ await alpaca.trading.orders.trailingStop({ symbol: "AAPL", side: "sell", qty: 1,
 Place a bracket order: entry plus take-profit and stop-loss legs.
 
 ```ts
-await alpaca.trading.orders.bracket({ symbol: "AAPL", side: "buy", qty: 1, takeProfit: { limitPrice: 160 }, stopLoss: { stopPrice: 140 } });
+await alpaca.trading.orders.bracket({
+  symbol: "AAPL",
+  side: "buy",
+  qty: 1,
+  takeProfit: { limitPrice: 160 },
+  stopLoss: { stopPrice: 140 },
+});
 ```
 
 ##### `alpaca.trading.orders.oco`
@@ -1706,7 +1987,13 @@ await alpaca.trading.orders.bracket({ symbol: "AAPL", side: "buy", qty: 1, takeP
 Place a one-cancels-other order (take-profit + stop-loss on a held position).
 
 ```ts
-await alpaca.trading.orders.oco({ symbol: "AAPL", side: "sell", qty: 1, takeProfit: { limitPrice: 160 }, stopLoss: { stopPrice: 140 } });
+await alpaca.trading.orders.oco({
+  symbol: "AAPL",
+  side: "sell",
+  qty: 1,
+  takeProfit: { limitPrice: 160 },
+  stopLoss: { stopPrice: 140 },
+});
 ```
 
 ##### `alpaca.trading.orders.oto`
@@ -1714,7 +2001,13 @@ await alpaca.trading.orders.oco({ symbol: "AAPL", side: "sell", qty: 1, takeProf
 Place a one-triggers-other order (entry that triggers a single leg).
 
 ```ts
-await alpaca.trading.orders.oto({ symbol: "AAPL", side: "buy", qty: 1, limitPrice: 150, takeProfit: { limitPrice: 160 } });
+await alpaca.trading.orders.oto({
+  symbol: "AAPL",
+  side: "buy",
+  qty: 1,
+  limitPrice: 150,
+  takeProfit: { limitPrice: 160 },
+});
 ```
 
 ##### `alpaca.trading.orders.submit`
@@ -1722,7 +2015,12 @@ await alpaca.trading.orders.oto({ symbol: "AAPL", side: "buy", qty: 1, limitPric
 Generic builder escape hatch for shapes the typed builders don't cover (e.g. `mleg`).
 
 ```ts
-await alpaca.trading.orders.submit({ type: "market", symbol: "AAPL", side: "buy", qty: 1 });
+await alpaca.trading.orders.submit({
+  type: "market",
+  symbol: "AAPL",
+  side: "buy",
+  qty: 1,
+});
 ```
 
 #### `alpaca.trading` — workflow helpers
@@ -1734,7 +2032,12 @@ High-level trading flows that would otherwise be boilerplate.
 Place an order and resolve once it reaches a terminal state, observed over the trading stream.
 
 ```ts
-const filled = await alpaca.trading.submitAndWait({ type: "market", symbol: "AAPL", side: "buy", qty: 1 }, { timeoutMs: 30_000 });
+const filled = await alpaca.trading.submitAndWait({
+  type: "market",
+  symbol: "AAPL",
+  side: "buy",
+  qty: 1,
+}, { timeoutMs: 30_000 });
 ```
 
 ##### `alpaca.trading.closeAllPositions`
@@ -1754,7 +2057,9 @@ Auto-paginated iterate/collect helpers for option contracts and account activiti
 Lazily yield option contracts across all pages.
 
 ```ts
-for await (const contract of alpaca.trading.iterateOptionsContracts({ underlyingSymbols: "AAPL" })) console.log(contract.symbol);
+for await (const contract of alpaca.trading.iterateOptionsContracts({
+  underlyingSymbols: "AAPL",
+})) console.log(contract.symbol);
 ```
 
 ##### `alpaca.trading.collectOptionsContracts`
@@ -1762,7 +2067,9 @@ for await (const contract of alpaca.trading.iterateOptionsContracts({ underlying
 Eagerly collect all option contracts across pages into one array.
 
 ```ts
-const contracts = await alpaca.trading.collectOptionsContracts({ underlyingSymbols: "AAPL" });
+const contracts = await alpaca.trading.collectOptionsContracts({
+  underlyingSymbols: "AAPL",
+});
 ```
 
 ##### `alpaca.trading.iterateActivities`
@@ -1770,7 +2077,9 @@ const contracts = await alpaca.trading.collectOptionsContracts({ underlyingSymbo
 Lazily yield account activities across all pages.
 
 ```ts
-for await (const activity of alpaca.trading.iterateActivities({ activityTypes: ["FILL"] })) console.log(activity.id);
+for await (const activity of alpaca.trading.iterateActivities({
+  activityTypes: ["FILL"],
+})) console.log(activity.id);
 ```
 
 ##### `alpaca.trading.collectActivities`
@@ -1778,7 +2087,9 @@ for await (const activity of alpaca.trading.iterateActivities({ activityTypes: [
 Eagerly collect all account activities across pages into one array.
 
 ```ts
-const activities = await alpaca.trading.collectActivities({ activityTypes: ["FILL"] });
+const activities = await alpaca.trading.collectActivities({
+  activityTypes: ["FILL"],
+});
 ```
 
 ##### `alpaca.trading.iterateActivitiesByType`
@@ -1786,7 +2097,9 @@ const activities = await alpaca.trading.collectActivities({ activityTypes: ["FIL
 Lazily yield activities of a single type across all pages.
 
 ```ts
-for await (const fill of alpaca.trading.iterateActivitiesByType({ activityType: "FILL" })) console.log(fill.id);
+for await (const fill of alpaca.trading.iterateActivitiesByType({
+  activityType: "FILL",
+})) console.log(fill.id);
 ```
 
 ##### `alpaca.trading.collectActivitiesByType`
@@ -1794,7 +2107,9 @@ for await (const fill of alpaca.trading.iterateActivitiesByType({ activityType: 
 Eagerly collect activities of a single type into one array.
 
 ```ts
-const fills = await alpaca.trading.collectActivitiesByType({ activityType: "FILL" });
+const fills = await alpaca.trading.collectActivitiesByType({
+  activityType: "FILL",
+});
 ```
 
 #### `alpaca.marketData` — workflow helpers
@@ -1818,7 +2133,11 @@ Auto-paginated, symbol-keyed accessors returning canonical Bar/Trade/Quote shape
 Historical stock bars as canonical `Bar`s, auto-paginated and keyed by symbol.
 
 ```ts
-const bars = await alpaca.marketData.getStockBars({ symbols: ["AAPL"], timeframe: "1Day", start: new Date("2024-01-01") });
+const bars = await alpaca.marketData.getStockBars({
+  symbols: ["AAPL"],
+  timeframe: "1Day",
+  start: new Date("2024-01-01"),
+});
 ```
 
 ##### `alpaca.marketData.getCryptoBars`
@@ -1826,7 +2145,12 @@ const bars = await alpaca.marketData.getStockBars({ symbols: ["AAPL"], timeframe
 Historical crypto bars as canonical `Bar`s, keyed by symbol.
 
 ```ts
-const bars = await alpaca.marketData.getCryptoBars({ loc: "us", symbols: ["BTC/USD"], timeframe: "1Day", start: new Date("2024-01-01") });
+const bars = await alpaca.marketData.getCryptoBars({
+  loc: "us",
+  symbols: ["BTC/USD"],
+  timeframe: "1Day",
+  start: new Date("2024-01-01"),
+});
 ```
 
 ##### `alpaca.marketData.getOptionBars`
@@ -1834,7 +2158,11 @@ const bars = await alpaca.marketData.getCryptoBars({ loc: "us", symbols: ["BTC/U
 Historical option bars as canonical `Bar`s, keyed by symbol.
 
 ```ts
-const bars = await alpaca.marketData.getOptionBars({ symbols: ["AAPL250117C00150000"], timeframe: "1Day", start: new Date("2024-01-01") });
+const bars = await alpaca.marketData.getOptionBars({
+  symbols: ["AAPL250117C00150000"],
+  timeframe: "1Day",
+  start: new Date("2024-01-01"),
+});
 ```
 
 ##### `alpaca.marketData.getStockTrades`
@@ -1842,7 +2170,10 @@ const bars = await alpaca.marketData.getOptionBars({ symbols: ["AAPL250117C00150
 Historical stock trades as canonical `Trade`s, keyed by symbol.
 
 ```ts
-const trades = await alpaca.marketData.getStockTrades({ symbols: ["AAPL"], start: new Date("2024-01-02") });
+const trades = await alpaca.marketData.getStockTrades({
+  symbols: ["AAPL"],
+  start: new Date("2024-01-02"),
+});
 ```
 
 ##### `alpaca.marketData.getCryptoTrades`
@@ -1850,7 +2181,11 @@ const trades = await alpaca.marketData.getStockTrades({ symbols: ["AAPL"], start
 Historical crypto trades as canonical `Trade`s, keyed by symbol.
 
 ```ts
-const trades = await alpaca.marketData.getCryptoTrades({ loc: "us", symbols: ["BTC/USD"], start: new Date("2024-01-02") });
+const trades = await alpaca.marketData.getCryptoTrades({
+  loc: "us",
+  symbols: ["BTC/USD"],
+  start: new Date("2024-01-02"),
+});
 ```
 
 ##### `alpaca.marketData.getStockQuotes`
@@ -1858,7 +2193,10 @@ const trades = await alpaca.marketData.getCryptoTrades({ loc: "us", symbols: ["B
 Historical stock quotes as canonical `Quote`s, keyed by symbol.
 
 ```ts
-const quotes = await alpaca.marketData.getStockQuotes({ symbols: ["AAPL"], start: new Date("2024-01-02") });
+const quotes = await alpaca.marketData.getStockQuotes({
+  symbols: ["AAPL"],
+  start: new Date("2024-01-02"),
+});
 ```
 
 ##### `alpaca.marketData.getCryptoQuotes`
@@ -1866,7 +2204,11 @@ const quotes = await alpaca.marketData.getStockQuotes({ symbols: ["AAPL"], start
 Historical crypto quotes as canonical `Quote`s, keyed by symbol.
 
 ```ts
-const quotes = await alpaca.marketData.getCryptoQuotes({ loc: "us", symbols: ["BTC/USD"], start: new Date("2024-01-02") });
+const quotes = await alpaca.marketData.getCryptoQuotes({
+  loc: "us",
+  symbols: ["BTC/USD"],
+  start: new Date("2024-01-02"),
+});
 ```
 
 ##### `alpaca.marketData.getStockCandles`
@@ -1874,7 +2216,11 @@ const quotes = await alpaca.marketData.getCryptoQuotes({ loc: "us", symbols: ["B
 Historical stock bars as chart-ready columnar `Candles`, keyed by symbol.
 
 ```ts
-const candles = await alpaca.marketData.getStockCandles({ symbols: ["AAPL"], timeframe: "1Day", start: new Date("2024-01-01") });
+const candles = await alpaca.marketData.getStockCandles({
+  symbols: ["AAPL"],
+  timeframe: "1Day",
+  start: new Date("2024-01-01"),
+});
 ```
 
 ##### `alpaca.marketData.getCryptoCandles`
@@ -1882,7 +2228,12 @@ const candles = await alpaca.marketData.getStockCandles({ symbols: ["AAPL"], tim
 Historical crypto bars as chart-ready columnar `Candles`, keyed by symbol.
 
 ```ts
-const candles = await alpaca.marketData.getCryptoCandles({ loc: "us", symbols: ["BTC/USD"], timeframe: "1Day", start: new Date("2024-01-01") });
+const candles = await alpaca.marketData.getCryptoCandles({
+  loc: "us",
+  symbols: ["BTC/USD"],
+  timeframe: "1Day",
+  start: new Date("2024-01-01"),
+});
 ```
 
 #### `alpaca.marketData` — pagination helpers
@@ -1894,7 +2245,11 @@ Auto-paginated iterate/collect helpers across every paginated market-data endpoi
 Lazily yield `{ symbol, value }` stock-bar records across symbols and pages.
 
 ```ts
-for await (const { symbol, value } of alpaca.marketData.iterateStockBars({ symbols: ["AAPL"], timeframe: "1Day", start: new Date("2024-01-01") })) console.log(symbol, value.c);
+for await (const { symbol, value } of alpaca.marketData.iterateStockBars({
+  symbols: ["AAPL"],
+  timeframe: "1Day",
+  start: new Date("2024-01-01"),
+})) console.log(symbol, value.c);
 ```
 
 ##### `alpaca.marketData.collectStockBarsBySymbol`
@@ -1902,7 +2257,11 @@ for await (const { symbol, value } of alpaca.marketData.iterateStockBars({ symbo
 Collect stock bars merged into a `{ [symbol]: StockBar[] }` map.
 
 ```ts
-const bySymbol = await alpaca.marketData.collectStockBarsBySymbol({ symbols: ["AAPL", "MSFT"], timeframe: "1Day", start: new Date("2024-01-01") });
+const bySymbol = await alpaca.marketData.collectStockBarsBySymbol({
+  symbols: ["AAPL", "MSFT"],
+  timeframe: "1Day",
+  start: new Date("2024-01-01"),
+});
 ```
 
 ##### `alpaca.marketData.iterateStockTrades`
@@ -1910,7 +2269,10 @@ const bySymbol = await alpaca.marketData.collectStockBarsBySymbol({ symbols: ["A
 Lazily yield stock-trade records across symbols and pages.
 
 ```ts
-for await (const { symbol, value } of alpaca.marketData.iterateStockTrades({ symbols: ["AAPL"], start: new Date("2024-01-02") })) console.log(symbol, value.p);
+for await (const { symbol, value } of alpaca.marketData.iterateStockTrades({
+  symbols: ["AAPL"],
+  start: new Date("2024-01-02"),
+})) console.log(symbol, value.p);
 ```
 
 ##### `alpaca.marketData.collectStockTradesBySymbol`
@@ -1918,7 +2280,10 @@ for await (const { symbol, value } of alpaca.marketData.iterateStockTrades({ sym
 Collect stock trades merged into a `{ [symbol]: StockTrade[] }` map.
 
 ```ts
-const bySymbol = await alpaca.marketData.collectStockTradesBySymbol({ symbols: ["AAPL"], start: new Date("2024-01-02") });
+const bySymbol = await alpaca.marketData.collectStockTradesBySymbol({
+  symbols: ["AAPL"],
+  start: new Date("2024-01-02"),
+});
 ```
 
 ##### `alpaca.marketData.iterateStockQuotes`
@@ -1926,7 +2291,10 @@ const bySymbol = await alpaca.marketData.collectStockTradesBySymbol({ symbols: [
 Lazily yield stock-quote records across symbols and pages.
 
 ```ts
-for await (const { symbol, value } of alpaca.marketData.iterateStockQuotes({ symbols: ["AAPL"], start: new Date("2024-01-02") })) console.log(symbol, value.bp);
+for await (const { symbol, value } of alpaca.marketData.iterateStockQuotes({
+  symbols: ["AAPL"],
+  start: new Date("2024-01-02"),
+})) console.log(symbol, value.bp);
 ```
 
 ##### `alpaca.marketData.collectStockQuotesBySymbol`
@@ -1934,7 +2302,10 @@ for await (const { symbol, value } of alpaca.marketData.iterateStockQuotes({ sym
 Collect stock quotes merged into a `{ [symbol]: StockQuote[] }` map.
 
 ```ts
-const bySymbol = await alpaca.marketData.collectStockQuotesBySymbol({ symbols: ["AAPL"], start: new Date("2024-01-02") });
+const bySymbol = await alpaca.marketData.collectStockQuotesBySymbol({
+  symbols: ["AAPL"],
+  start: new Date("2024-01-02"),
+});
 ```
 
 ##### `alpaca.marketData.iterateStockAuctions`
@@ -1942,7 +2313,10 @@ const bySymbol = await alpaca.marketData.collectStockQuotesBySymbol({ symbols: [
 Lazily yield daily-auction records across symbols and pages.
 
 ```ts
-for await (const { symbol, value } of alpaca.marketData.iterateStockAuctions({ symbols: ["AAPL"], start: new Date("2024-01-02") })) console.log(symbol, value.d);
+for await (const { symbol, value } of alpaca.marketData.iterateStockAuctions({
+  symbols: ["AAPL"],
+  start: new Date("2024-01-02"),
+})) console.log(symbol, value.d);
 ```
 
 ##### `alpaca.marketData.collectStockAuctionsBySymbol`
@@ -1950,7 +2324,10 @@ for await (const { symbol, value } of alpaca.marketData.iterateStockAuctions({ s
 Collect stock auctions merged into a `{ [symbol]: StockDailyAuctions[] }` map.
 
 ```ts
-const bySymbol = await alpaca.marketData.collectStockAuctionsBySymbol({ symbols: ["AAPL"], start: new Date("2024-01-02") });
+const bySymbol = await alpaca.marketData.collectStockAuctionsBySymbol({
+  symbols: ["AAPL"],
+  start: new Date("2024-01-02"),
+});
 ```
 
 ##### `alpaca.marketData.iterateCryptoBars`
@@ -1958,7 +2335,12 @@ const bySymbol = await alpaca.marketData.collectStockAuctionsBySymbol({ symbols:
 Lazily yield crypto-bar records across symbols and pages.
 
 ```ts
-for await (const { symbol, value } of alpaca.marketData.iterateCryptoBars({ loc: "us", symbols: ["BTC/USD"], timeframe: "1Day", start: new Date("2024-01-01") })) console.log(symbol, value.c);
+for await (const { symbol, value } of alpaca.marketData.iterateCryptoBars({
+  loc: "us",
+  symbols: ["BTC/USD"],
+  timeframe: "1Day",
+  start: new Date("2024-01-01"),
+})) console.log(symbol, value.c);
 ```
 
 ##### `alpaca.marketData.collectCryptoBarsBySymbol`
@@ -1966,7 +2348,12 @@ for await (const { symbol, value } of alpaca.marketData.iterateCryptoBars({ loc:
 Collect crypto bars merged into a `{ [symbol]: CryptoBar[] }` map.
 
 ```ts
-const bySymbol = await alpaca.marketData.collectCryptoBarsBySymbol({ loc: "us", symbols: ["BTC/USD"], timeframe: "1Day", start: new Date("2024-01-01") });
+const bySymbol = await alpaca.marketData.collectCryptoBarsBySymbol({
+  loc: "us",
+  symbols: ["BTC/USD"],
+  timeframe: "1Day",
+  start: new Date("2024-01-01"),
+});
 ```
 
 ##### `alpaca.marketData.iterateCryptoTrades`
@@ -1974,7 +2361,11 @@ const bySymbol = await alpaca.marketData.collectCryptoBarsBySymbol({ loc: "us", 
 Lazily yield crypto-trade records across symbols and pages.
 
 ```ts
-for await (const { symbol, value } of alpaca.marketData.iterateCryptoTrades({ loc: "us", symbols: ["BTC/USD"], start: new Date("2024-01-02") })) console.log(symbol, value.p);
+for await (const { symbol, value } of alpaca.marketData.iterateCryptoTrades({
+  loc: "us",
+  symbols: ["BTC/USD"],
+  start: new Date("2024-01-02"),
+})) console.log(symbol, value.p);
 ```
 
 ##### `alpaca.marketData.collectCryptoTradesBySymbol`
@@ -1982,7 +2373,11 @@ for await (const { symbol, value } of alpaca.marketData.iterateCryptoTrades({ lo
 Collect crypto trades merged into a `{ [symbol]: CryptoTrade[] }` map.
 
 ```ts
-const bySymbol = await alpaca.marketData.collectCryptoTradesBySymbol({ loc: "us", symbols: ["BTC/USD"], start: new Date("2024-01-02") });
+const bySymbol = await alpaca.marketData.collectCryptoTradesBySymbol({
+  loc: "us",
+  symbols: ["BTC/USD"],
+  start: new Date("2024-01-02"),
+});
 ```
 
 ##### `alpaca.marketData.iterateCryptoQuotes`
@@ -1990,7 +2385,11 @@ const bySymbol = await alpaca.marketData.collectCryptoTradesBySymbol({ loc: "us"
 Lazily yield crypto-quote records across symbols and pages.
 
 ```ts
-for await (const { symbol, value } of alpaca.marketData.iterateCryptoQuotes({ loc: "us", symbols: ["BTC/USD"], start: new Date("2024-01-02") })) console.log(symbol, value.bp);
+for await (const { symbol, value } of alpaca.marketData.iterateCryptoQuotes({
+  loc: "us",
+  symbols: ["BTC/USD"],
+  start: new Date("2024-01-02"),
+})) console.log(symbol, value.bp);
 ```
 
 ##### `alpaca.marketData.collectCryptoQuotesBySymbol`
@@ -1998,7 +2397,11 @@ for await (const { symbol, value } of alpaca.marketData.iterateCryptoQuotes({ lo
 Collect crypto quotes merged into a `{ [symbol]: CryptoQuote[] }` map.
 
 ```ts
-const bySymbol = await alpaca.marketData.collectCryptoQuotesBySymbol({ loc: "us", symbols: ["BTC/USD"], start: new Date("2024-01-02") });
+const bySymbol = await alpaca.marketData.collectCryptoQuotesBySymbol({
+  loc: "us",
+  symbols: ["BTC/USD"],
+  start: new Date("2024-01-02"),
+});
 ```
 
 ##### `alpaca.marketData.iterateOptionBars`
@@ -2006,7 +2409,11 @@ const bySymbol = await alpaca.marketData.collectCryptoQuotesBySymbol({ loc: "us"
 Lazily yield option-bar records across symbols and pages.
 
 ```ts
-for await (const { symbol, value } of alpaca.marketData.iterateOptionBars({ symbols: ["AAPL250117C00150000"], timeframe: "1Day", start: new Date("2024-01-01") })) console.log(symbol, value.c);
+for await (const { symbol, value } of alpaca.marketData.iterateOptionBars({
+  symbols: ["AAPL250117C00150000"],
+  timeframe: "1Day",
+  start: new Date("2024-01-01"),
+})) console.log(symbol, value.c);
 ```
 
 ##### `alpaca.marketData.collectOptionBarsBySymbol`
@@ -2014,7 +2421,11 @@ for await (const { symbol, value } of alpaca.marketData.iterateOptionBars({ symb
 Collect option bars merged into a `{ [symbol]: OptionBar[] }` map.
 
 ```ts
-const bySymbol = await alpaca.marketData.collectOptionBarsBySymbol({ symbols: ["AAPL250117C00150000"], timeframe: "1Day", start: new Date("2024-01-01") });
+const bySymbol = await alpaca.marketData.collectOptionBarsBySymbol({
+  symbols: ["AAPL250117C00150000"],
+  timeframe: "1Day",
+  start: new Date("2024-01-01"),
+});
 ```
 
 ##### `alpaca.marketData.iterateOptionTrades`
@@ -2022,7 +2433,10 @@ const bySymbol = await alpaca.marketData.collectOptionBarsBySymbol({ symbols: ["
 Lazily yield option-trade records across symbols and pages.
 
 ```ts
-for await (const { symbol, value } of alpaca.marketData.iterateOptionTrades({ symbols: ["AAPL250117C00150000"], start: new Date("2024-01-02") })) console.log(symbol, value.p);
+for await (const { symbol, value } of alpaca.marketData.iterateOptionTrades({
+  symbols: ["AAPL250117C00150000"],
+  start: new Date("2024-01-02"),
+})) console.log(symbol, value.p);
 ```
 
 ##### `alpaca.marketData.collectOptionTradesBySymbol`
@@ -2030,7 +2444,10 @@ for await (const { symbol, value } of alpaca.marketData.iterateOptionTrades({ sy
 Collect option trades merged into a `{ [symbol]: OptionTrade[] }` map.
 
 ```ts
-const bySymbol = await alpaca.marketData.collectOptionTradesBySymbol({ symbols: ["AAPL250117C00150000"], start: new Date("2024-01-02") });
+const bySymbol = await alpaca.marketData.collectOptionTradesBySymbol({
+  symbols: ["AAPL250117C00150000"],
+  start: new Date("2024-01-02"),
+});
 ```
 
 ##### `alpaca.marketData.iterateIndexValues`
@@ -2038,7 +2455,10 @@ const bySymbol = await alpaca.marketData.collectOptionTradesBySymbol({ symbols: 
 Lazily yield index-value records across symbols and pages.
 
 ```ts
-for await (const { symbol, value } of alpaca.marketData.iterateIndexValues({ symbols: ["SPX"], start: new Date("2024-01-01") })) console.log(symbol, value);
+for await (const { symbol, value } of alpaca.marketData.iterateIndexValues({
+  symbols: ["SPX"],
+  start: new Date("2024-01-01"),
+})) console.log(symbol, value);
 ```
 
 ##### `alpaca.marketData.collectIndexValuesBySymbol`
@@ -2046,7 +2466,10 @@ for await (const { symbol, value } of alpaca.marketData.iterateIndexValues({ sym
 Collect index values merged into a `{ [symbol]: IndexValue[] }` map.
 
 ```ts
-const bySymbol = await alpaca.marketData.collectIndexValuesBySymbol({ symbols: ["SPX"], start: new Date("2024-01-01") });
+const bySymbol = await alpaca.marketData.collectIndexValuesBySymbol({
+  symbols: ["SPX"],
+  start: new Date("2024-01-01"),
+});
 ```
 
 ##### `alpaca.marketData.iterateForexRates`
@@ -2054,7 +2477,10 @@ const bySymbol = await alpaca.marketData.collectIndexValuesBySymbol({ symbols: [
 Lazily yield forex-rate records across currency pairs and pages.
 
 ```ts
-for await (const { symbol, value } of alpaca.marketData.iterateForexRates({ currencyPairs: ["EUR/USD"], start: new Date("2024-01-01") })) console.log(symbol, value);
+for await (const { symbol, value } of alpaca.marketData.iterateForexRates({
+  currencyPairs: ["EUR/USD"],
+  start: new Date("2024-01-01"),
+})) console.log(symbol, value);
 ```
 
 ##### `alpaca.marketData.collectForexRatesBySymbol`
@@ -2062,7 +2488,10 @@ for await (const { symbol, value } of alpaca.marketData.iterateForexRates({ curr
 Collect forex rates merged into a `{ [pair]: ForexRate[] }` map.
 
 ```ts
-const byPair = await alpaca.marketData.collectForexRatesBySymbol({ currencyPairs: ["EUR/USD"], start: new Date("2024-01-01") });
+const byPair = await alpaca.marketData.collectForexRatesBySymbol({
+  currencyPairs: ["EUR/USD"],
+  start: new Date("2024-01-01"),
+});
 ```
 
 ##### `alpaca.marketData.iterateOptionSnapshots`
@@ -2070,7 +2499,9 @@ const byPair = await alpaca.marketData.collectForexRatesBySymbol({ currencyPairs
 Lazily yield `{ symbol, value }` option-snapshot records across symbols and pages.
 
 ```ts
-for await (const { symbol, value } of alpaca.marketData.iterateOptionSnapshots({ symbols: ["AAPL250117C00150000"] })) console.log(symbol, value);
+for await (const { symbol, value } of alpaca.marketData.iterateOptionSnapshots({
+  symbols: ["AAPL250117C00150000"],
+})) console.log(symbol, value);
 ```
 
 ##### `alpaca.marketData.collectOptionSnapshotsBySymbol`
@@ -2078,7 +2509,9 @@ for await (const { symbol, value } of alpaca.marketData.iterateOptionSnapshots({
 Collect option snapshots into a `{ [symbol]: OptionSnapshot }` map.
 
 ```ts
-const bySymbol = await alpaca.marketData.collectOptionSnapshotsBySymbol({ symbols: ["AAPL250117C00150000"] });
+const bySymbol = await alpaca.marketData.collectOptionSnapshotsBySymbol({
+  symbols: ["AAPL250117C00150000"],
+});
 ```
 
 ##### `alpaca.marketData.iterateOptionChain`
@@ -2086,7 +2519,9 @@ const bySymbol = await alpaca.marketData.collectOptionSnapshotsBySymbol({ symbol
 Lazily yield an underlying's option-chain snapshots across symbols and pages.
 
 ```ts
-for await (const { symbol, value } of alpaca.marketData.iterateOptionChain({ underlyingSymbol: "AAPL" })) console.log(symbol, value);
+for await (const { symbol, value } of alpaca.marketData.iterateOptionChain({
+  underlyingSymbol: "AAPL",
+})) console.log(symbol, value);
 ```
 
 ##### `alpaca.marketData.collectOptionChainBySymbol`
@@ -2094,7 +2529,9 @@ for await (const { symbol, value } of alpaca.marketData.iterateOptionChain({ und
 Collect an option chain's snapshots into a `{ [symbol]: OptionSnapshot }` map.
 
 ```ts
-const chain = await alpaca.marketData.collectOptionChainBySymbol({ underlyingSymbol: "AAPL" });
+const chain = await alpaca.marketData.collectOptionChainBySymbol({
+  underlyingSymbol: "AAPL",
+});
 ```
 
 ##### `alpaca.marketData.iterateStockBarSingle`
@@ -2102,7 +2539,11 @@ const chain = await alpaca.marketData.collectOptionChainBySymbol({ underlyingSym
 Lazily yield a single symbol's stock bars across all pages.
 
 ```ts
-for await (const bar of alpaca.marketData.iterateStockBarSingle({ symbol: "AAPL", timeframe: "1Day", start: new Date("2024-01-01") })) console.log(bar.c);
+for await (const bar of alpaca.marketData.iterateStockBarSingle({
+  symbol: "AAPL",
+  timeframe: "1Day",
+  start: new Date("2024-01-01"),
+})) console.log(bar.c);
 ```
 
 ##### `alpaca.marketData.collectStockBarSingle`
@@ -2110,7 +2551,11 @@ for await (const bar of alpaca.marketData.iterateStockBarSingle({ symbol: "AAPL"
 Collect a single symbol's stock bars into one `StockBar[]` array.
 
 ```ts
-const bars = await alpaca.marketData.collectStockBarSingle({ symbol: "AAPL", timeframe: "1Day", start: new Date("2024-01-01") });
+const bars = await alpaca.marketData.collectStockBarSingle({
+  symbol: "AAPL",
+  timeframe: "1Day",
+  start: new Date("2024-01-01"),
+});
 ```
 
 ##### `alpaca.marketData.iterateStockTradeSingle`
@@ -2118,7 +2563,10 @@ const bars = await alpaca.marketData.collectStockBarSingle({ symbol: "AAPL", tim
 Lazily yield a single symbol's stock trades across all pages.
 
 ```ts
-for await (const trade of alpaca.marketData.iterateStockTradeSingle({ symbol: "AAPL", start: new Date("2024-01-02") })) console.log(trade.p);
+for await (const trade of alpaca.marketData.iterateStockTradeSingle({
+  symbol: "AAPL",
+  start: new Date("2024-01-02"),
+})) console.log(trade.p);
 ```
 
 ##### `alpaca.marketData.collectStockTradeSingle`
@@ -2126,7 +2574,10 @@ for await (const trade of alpaca.marketData.iterateStockTradeSingle({ symbol: "A
 Collect a single symbol's stock trades into one `StockTrade[]` array.
 
 ```ts
-const trades = await alpaca.marketData.collectStockTradeSingle({ symbol: "AAPL", start: new Date("2024-01-02") });
+const trades = await alpaca.marketData.collectStockTradeSingle({
+  symbol: "AAPL",
+  start: new Date("2024-01-02"),
+});
 ```
 
 ##### `alpaca.marketData.iterateStockQuoteSingle`
@@ -2134,7 +2585,10 @@ const trades = await alpaca.marketData.collectStockTradeSingle({ symbol: "AAPL",
 Lazily yield a single symbol's stock quotes across all pages.
 
 ```ts
-for await (const quote of alpaca.marketData.iterateStockQuoteSingle({ symbol: "AAPL", start: new Date("2024-01-02") })) console.log(quote.bp);
+for await (const quote of alpaca.marketData.iterateStockQuoteSingle({
+  symbol: "AAPL",
+  start: new Date("2024-01-02"),
+})) console.log(quote.bp);
 ```
 
 ##### `alpaca.marketData.collectStockQuoteSingle`
@@ -2142,7 +2596,10 @@ for await (const quote of alpaca.marketData.iterateStockQuoteSingle({ symbol: "A
 Collect a single symbol's stock quotes into one `StockQuote[]` array.
 
 ```ts
-const quotes = await alpaca.marketData.collectStockQuoteSingle({ symbol: "AAPL", start: new Date("2024-01-02") });
+const quotes = await alpaca.marketData.collectStockQuoteSingle({
+  symbol: "AAPL",
+  start: new Date("2024-01-02"),
+});
 ```
 
 ##### `alpaca.marketData.iterateStockAuctionSingle`
@@ -2150,7 +2607,10 @@ const quotes = await alpaca.marketData.collectStockQuoteSingle({ symbol: "AAPL",
 Lazily yield a single symbol's daily auctions across all pages.
 
 ```ts
-for await (const auction of alpaca.marketData.iterateStockAuctionSingle({ symbol: "AAPL", start: new Date("2024-01-02") })) console.log(auction.d);
+for await (const auction of alpaca.marketData.iterateStockAuctionSingle({
+  symbol: "AAPL",
+  start: new Date("2024-01-02"),
+})) console.log(auction.d);
 ```
 
 ##### `alpaca.marketData.collectStockAuctionSingle`
@@ -2158,7 +2618,10 @@ for await (const auction of alpaca.marketData.iterateStockAuctionSingle({ symbol
 Collect a single symbol's daily auctions into one array.
 
 ```ts
-const auctions = await alpaca.marketData.collectStockAuctionSingle({ symbol: "AAPL", start: new Date("2024-01-02") });
+const auctions = await alpaca.marketData.collectStockAuctionSingle({
+  symbol: "AAPL",
+  start: new Date("2024-01-02"),
+});
 ```
 
 ##### `alpaca.marketData.iterateNews`
@@ -2166,7 +2629,9 @@ const auctions = await alpaca.marketData.collectStockAuctionSingle({ symbol: "AA
 Lazily yield news articles across all pages.
 
 ```ts
-for await (const article of alpaca.marketData.iterateNews({ symbols: ["AAPL"] })) console.log(article.headline);
+for await (const article of alpaca.marketData.iterateNews({
+  symbols: ["AAPL"],
+})) console.log(article.headline);
 ```
 
 ##### `alpaca.marketData.collectNews`
@@ -2182,7 +2647,9 @@ const articles = await alpaca.marketData.collectNews({ symbols: ["AAPL"] });
 Lazily yield each page's `CorporateActions` envelope, following the token.
 
 ```ts
-for await (const page of alpaca.marketData.iterateCorporateActionsPages({ symbols: ["AAPL"] })) console.log(page.cashDividends);
+for await (const page of alpaca.marketData.iterateCorporateActionsPages({
+  symbols: ["AAPL"],
+})) console.log(page.cashDividends);
 ```
 
 ##### `alpaca.marketData.collectCorporateActions`
@@ -2190,7 +2657,10 @@ for await (const page of alpaca.marketData.iterateCorporateActionsPages({ symbol
 Collect corporate actions across pages into one merged `CorporateActions` object.
 
 ```ts
-const actions = await alpaca.marketData.collectCorporateActions({ symbols: ["AAPL"], start: new Date("2024-01-01") });
+const actions = await alpaca.marketData.collectCorporateActions({
+  symbols: ["AAPL"],
+  start: new Date("2024-01-01"),
+});
 ```
 
 <!-- API-REFERENCE:END -->
