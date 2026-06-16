@@ -69,7 +69,8 @@ interface InFlight {
 function defaultIdGenerator(): () => string {
     const cryptoObj = (globalThis as { crypto?: { randomUUID?: () => string } }).crypto;
     if (cryptoObj?.randomUUID) {
-        return () => cryptoObj.randomUUID!();
+        const randomUUID = cryptoObj.randomUUID.bind(cryptoObj);
+        return () => randomUUID();
     }
     let counter = 0;
     return () => `req-${Date.now().toString(36)}-${(counter++).toString(36)}`;
@@ -93,7 +94,9 @@ function readHeaders(init: RequestInit | undefined, redact: Set<string>): Record
     };
     if (!h) return out;
     if (typeof Headers !== "undefined" && h instanceof Headers) {
-        h.forEach((value, key) => put(key, value));
+        h.forEach((value, key) => {
+            put(key, value);
+        });
     } else if (Array.isArray(h)) {
         for (const [key, value] of h) put(key, value);
     } else {

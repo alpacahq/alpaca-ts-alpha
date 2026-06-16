@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 
 import * as trading from '../src/trading';
 import * as marketData from '../src/market-data';
@@ -441,5 +441,42 @@ describe('paper/live environment switching', () => {
     it('ignores the paper flag for market data (single host)', () => {
         expect(new marketData.Configuration({ paper: false }).basePath).toBe(marketData.MARKET_DATA_HOST);
         expect(new marketData.Configuration({ paper: true }).basePath).toBe(marketData.MARKET_DATA_HOST);
+    });
+});
+
+describe('no-argument API construction defaults to the package host', () => {
+    /** Capture the URL of the next global-fetch call and return a canned 200. */
+    function stubGlobalFetch(): { urls: string[] } {
+        const urls: string[] = [];
+        vi.stubGlobal('fetch', async (url: string | URL | Request) => {
+            urls.push(String(url));
+            return new Response(JSON.stringify({}), {
+                status: 200,
+                headers: { 'Content-Type': 'application/json' },
+            });
+        });
+        return { urls };
+    }
+
+    afterEach(() => {
+        vi.unstubAllGlobals();
+    });
+
+    it('a trading API built with no Configuration targets the paper host', async () => {
+        const { urls } = stubGlobalFetch();
+        // No config => uses the package DefaultConfig (paper) and global fetch.
+        await new trading.AccountsApi().getAccount();
+        expect(urls[0]).toContain(trading.TRADING_PAPER_HOST);
+    });
+
+    it('a market-data API built with no Configuration targets the data host', async () => {
+        const { urls } = stubGlobalFetch();
+        await new marketData.StockApi().stockMetaExchanges();
+        expect(urls[0]).toContain(marketData.MARKET_DATA_HOST);
+    });
+
+    it('keeps the public DefaultConfig in sync with that default', () => {
+        expect(trading.DefaultConfig.basePath).toBe(trading.TRADING_PAPER_HOST);
+        expect(marketData.DefaultConfig.basePath).toBe(marketData.MARKET_DATA_HOST);
     });
 });

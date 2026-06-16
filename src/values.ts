@@ -3,9 +3,10 @@
  * caller.
  *
  * Alpaca's API models money/quantity as numeric strings (e.g. `"1234.56"`),
- * timestamps inconsistently as `Date` (trading models) or `string`
- * (market-data responses), and `timeframe` as a free-form string even though
- * its grammar is fixed. The official SDKs cope with this differently:
+ * timestamps as `Date` on the typed models (though market-data list responses
+ * deserialize their symbol-keyed maps verbatim, so nested timestamps can arrive
+ * as ISO `string`s at runtime), and `timeframe` as a free-form string even
+ * though its grammar is fixed. The official SDKs cope with this differently:
  *
  *   - alpaca-py keeps money fields as `str` and ships a `TimeFrame(amount,
  *     unit)` builder with a `TimeFrameUnit` enum and presets.
@@ -88,9 +89,9 @@ export function formatMoney(
 }
 
 /**
- * Normalize a time field that may be a `Date` (trading models) or an ISO
- * `string` (market-data responses) into a `Date`. Returns `undefined` for
- * nullish or invalid input (never throws).
+ * Normalize a time field that may be a `Date` or an ISO `string` (as nested
+ * market-data list timestamps can arrive at runtime) into a `Date`. Returns
+ * `undefined` for nullish or invalid input (never throws).
  */
 export function toDate(value: string | Date | null | undefined): Date | undefined {
     if (value == null) {

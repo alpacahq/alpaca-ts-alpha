@@ -63,6 +63,12 @@ export class ApiError extends ResponseError {
          * `Retry-After` when present, else from `X-RateLimit-Reset`.
          */
         public retryAfterMs?: number,
+        /**
+         * Alpaca's `X-Request-ID` for this call, when present. It uniquely
+         * identifies the request in Alpaca's systems and cannot be looked up
+         * later, so log it (or include it in support tickets) on failure.
+         */
+        public requestId?: string,
     ) {
         super(response, msg);
         this.name = "ApiError";
@@ -167,6 +173,14 @@ function computeRetryAfterMs(headers: Headers | undefined, rateLimit?: RateLimit
     return undefined;
 }
 
+function parseRequestId(headers: Headers | undefined): string | undefined {
+    if (!headers || typeof headers.get !== "function") {
+        return undefined;
+    }
+    // `Headers.get` is case-insensitive, so this also matches `x-request-id`.
+    return headers.get("X-Request-ID") ?? undefined;
+}
+
 function errorForStatus(
     status: number,
     response: Response,
@@ -174,8 +188,9 @@ function errorForStatus(
     message: string,
     rateLimit: RateLimitInfo | undefined,
     retryAfterMs: number | undefined,
+    requestId: string | undefined,
 ): ApiError {
-    const args = [response, status, code, message, rateLimit, retryAfterMs] as const;
+    const args = [response, status, code, message, rateLimit, retryAfterMs, requestId] as const;
     switch (status) {
         case 401:
             return new AuthError(...args);
@@ -206,13 +221,14 @@ export async function buildApiError(response: Response): Promise<ApiError> {
         const text = await response.clone().text();
         if (text) {
             try {
-                const body = JSON.parse(text);
+                const body: unknown = JSON.parse(text);
                 if (body && typeof body === 'object') {
-                    if ('code' in body && (body as any).code != null) {
-                        code = (body as any).code;
+                    const envelope = body as { code?: unknown; message?: unknown };
+                    if (envelope.code != null) {
+                        code = envelope.code as number | string;
                     }
-                    if ('message' in body && (body as any).message) {
-                        message = String((body as any).message);
+                    if (envelope.message) {
+                        message = String(envelope.message);
                     }
                 } else if (typeof body === 'string' && body) {
                     message = body;
@@ -226,7 +242,8 @@ export async function buildApiError(response: Response): Promise<ApiError> {
     }
     const rateLimit = parseRateLimit(response.headers);
     const retryAfterMs = computeRetryAfterMs(response.headers, rateLimit);
-    return errorForStatus(response.status, response, code, message, rateLimit, retryAfterMs);
+    const requestId = parseRequestId(response.headers);
+    return errorForStatus(response.status, response, code, message, rateLimit, retryAfterMs, requestId);
 }
 
 /**

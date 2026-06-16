@@ -21,3 +21,8 @@
 #docs/*.md
 # Then explicitly reverse the ignore rule for a single file:
 #!docs/README.md
+
+# Hand-maintained transport shim. The shared HTTP transport lives in
+# `src/core/runtime.ts`; this file only adds the host + Configuration subclass.
+# Keep the generator from clobbering it.
+runtime.ts

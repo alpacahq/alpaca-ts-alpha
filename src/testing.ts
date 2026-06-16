@@ -1,5 +1,5 @@
 /**
- * Test harness for code built on `@alpaca/sdk` (`@alpaca/sdk/testing`).
+ * Test harness for code built on `@alpacahq/alpaca-ts-alpha` (`@alpacahq/alpaca-ts-alpha/testing`).
  *
  * `mockFetch` builds a `fetchApi` that answers canned responses by HTTP
  * method + path, and `createMockAlpaca` wires one into a ready-to-use `Alpaca`

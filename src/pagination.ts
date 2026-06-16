@@ -8,7 +8,7 @@
  *
  * @example
  * ```ts
- * import { marketData, pagination } from "@alpaca/sdk";
+ * import { marketData, pagination } from "@alpacahq/alpaca-ts-alpha";
  *
  * const stocks = new marketData.StockApi(config);
  * for await (const trade of pagination.paginate(async (pageToken) => {
@@ -35,7 +35,7 @@ export type PageFetcher<T> = (pageToken?: string) => Promise<Page<T>>;
  * the API stops returning one.
  */
 export async function* paginate<T>(fetchPage: PageFetcher<T>): AsyncGenerator<T, void, void> {
-    let pageToken: string | undefined = undefined;
+    let pageToken: string | undefined ;
     do {
         const page = await fetchPage(pageToken);
         for (const item of page.items ?? []) {
@@ -45,14 +45,29 @@ export async function* paginate<T>(fetchPage: PageFetcher<T>): AsyncGenerator<T,
     } while (pageToken);
 }
 
+/** Options bounding an eager `collect`. */
+export interface CollectOptions {
+    /**
+     * Stop once this many items have been collected, truncating the final page
+     * and not fetching further pages. Guards against unbounded result sets
+     * (e.g. years of minute bars). Omit for "all pages".
+     */
+    maxItems?: number;
+}
+
 /**
- * Eagerly collects every item across all pages into a single array.
- * Convenience wrapper over {@link paginate}; beware unbounded result sets.
+ * Eagerly collects items across pages into a single array. Pass
+ * {@link CollectOptions.maxItems} to bound the result; otherwise beware
+ * unbounded result sets.
  */
-export async function collect<T>(fetchPage: PageFetcher<T>): Promise<T[]> {
+export async function collect<T>(fetchPage: PageFetcher<T>, options: CollectOptions = {}): Promise<T[]> {
     const out: T[] = [];
+    const max = options.maxItems;
     for await (const item of paginate(fetchPage)) {
         out.push(item);
+        if (max !== undefined && out.length >= max) {
+            break;
+        }
     }
     return out;
 }
@@ -82,7 +97,7 @@ export type SymbolMapPageFetcher<T> = (pageToken?: string) => Promise<SymbolMapP
 export async function* paginateSymbolMap<T>(
     fetchPage: SymbolMapPageFetcher<T>,
 ): AsyncGenerator<{ symbol: string; value: T }, void, void> {
-    let pageToken: string | undefined = undefined;
+    let pageToken: string | undefined ;
     do {
         const page = await fetchPage(pageToken);
         const data = page.data ?? {};
@@ -95,25 +110,70 @@ export async function* paginateSymbolMap<T>(
     } while (pageToken);
 }
 
+/** Options bounding an eager {@link collectBySymbol}. */
+export interface SymbolMapCollectOptions {
+    /**
+     * Keep at most this many records per symbol, stopping early (no further page
+     * fetches) once every expected symbol is full. Guards against unbounded
+     * per-symbol history. Omit for "all pages".
+     */
+    maxPerSymbol?: number;
+    /**
+     * The symbols that were requested. Used only to know when an early stop is
+     * safe under `maxPerSymbol` (so a symbol that only appears on a later page
+     * is not truncated). When omitted, per-symbol arrays are still capped but
+     * pagination runs to completion.
+     */
+    symbols?: string[];
+}
+
 /**
  * Eagerly collects a symbol-keyed response into a single merged
  * `{ [symbol]: T[] }` map, concatenating each symbol's arrays across pages.
- * Beware unbounded result sets.
+ * Pass {@link SymbolMapCollectOptions.maxPerSymbol} to bound it; otherwise
+ * beware unbounded result sets.
  */
 export async function collectBySymbol<T>(
     fetchPage: SymbolMapPageFetcher<T>,
+    options: SymbolMapCollectOptions = {},
 ): Promise<{ [symbol: string]: T[] }> {
     const out: { [symbol: string]: T[] } = {};
-    let pageToken: string | undefined = undefined;
+    const cap = options.maxPerSymbol;
+    const expected = options.symbols;
+    let pageToken: string | undefined ;
     do {
         const page = await fetchPage(pageToken);
         const data = page.data ?? {};
         for (const symbol of Object.keys(data)) {
-            (out[symbol] ??= []).push(...(data[symbol] ?? []));
+            const arr = (out[symbol] ??= []);
+            for (const value of data[symbol] ?? []) {
+                if (cap !== undefined && arr.length >= cap) {
+                    break;
+                }
+                arr.push(value);
+            }
         }
         pageToken = page.nextPageToken ? page.nextPageToken : undefined;
+        if (cap !== undefined && allSymbolsCapped(out, cap, expected)) {
+            break;
+        }
     } while (pageToken);
     return out;
+}
+
+/**
+ * True once every expected symbol has reached the cap. When the expected set is
+ * unknown we cannot prove a not-yet-seen symbol is full, so we never stop early.
+ */
+function allSymbolsCapped<T>(
+    out: { [symbol: string]: T[] },
+    cap: number,
+    expected: string[] | undefined,
+): boolean {
+    if (!expected) {
+        return false;
+    }
+    return expected.every((symbol) => (out[symbol]?.length ?? 0) >= cap);
 }
 
 // --- Symbol-keyed single-object pagination --------------------------------
@@ -137,7 +197,7 @@ export type SymbolObjectPageFetcher<T> = (pageToken?: string) => Promise<SymbolO
 export async function* paginateSymbolObjects<T>(
     fetchPage: SymbolObjectPageFetcher<T>,
 ): AsyncGenerator<{ symbol: string; value: T }, void, void> {
-    let pageToken: string | undefined = undefined;
+    let pageToken: string | undefined ;
     do {
         const page = await fetchPage(pageToken);
         const data = page.data ?? {};
@@ -156,7 +216,7 @@ export async function collectSymbolObjects<T>(
     fetchPage: SymbolObjectPageFetcher<T>,
 ): Promise<{ [symbol: string]: T }> {
     const out: { [symbol: string]: T } = {};
-    let pageToken: string | undefined = undefined;
+    let pageToken: string | undefined ;
     do {
         const page = await fetchPage(pageToken);
         const data = page.data ?? {};
@@ -190,7 +250,7 @@ export async function* paginateCursor<T>(
     options: CursorOptions<T>,
 ): AsyncGenerator<T, void, void> {
     const { fetchPage, getCursor, pageSize } = options;
-    let pageToken: string | undefined = undefined;
+    let pageToken: string | undefined ;
     for (;;) {
         const page = await fetchPage(pageToken);
         if (!page || page.length === 0) {
@@ -210,11 +270,63 @@ export async function* paginateCursor<T>(
     }
 }
 
-/** Eagerly collects every item across all cursor pages into a single array. */
-export async function collectCursor<T>(options: CursorOptions<T>): Promise<T[]> {
+/** Eagerly collects items across cursor pages into a single array. */
+export async function collectCursor<T>(options: CursorOptions<T>, collectOptions: CollectOptions = {}): Promise<T[]> {
     const out: T[] = [];
+    const max = collectOptions.maxItems;
     for await (const item of paginateCursor(options)) {
         out.push(item);
+        if (max !== undefined && out.length >= max) {
+            break;
+        }
     }
     return out;
+}
+
+// --- Bounded concurrency ---------------------------------------------------
+//
+// Multi-symbol endpoints multiplex every symbol into one request with a single
+// page-token chain, which is followed sequentially. To speed up large baskets
+// over long ranges, callers can split the symbol list and fetch the chunks in
+// parallel with a capped number of in-flight requests. These are the building
+// blocks the `MarketDataClient` uses for that.
+
+/** Split `items` into consecutive groups of at most `size` (>= 1). */
+export function chunk<T>(items: T[], size: number): T[][] {
+    const n = Math.max(1, Math.floor(size));
+    const out: T[][] = [];
+    for (let i = 0; i < items.length; i += n) {
+        out.push(items.slice(i, i + n));
+    }
+    return out;
+}
+
+/**
+ * Map `items` through an async `worker`, keeping at most `concurrency` calls in
+ * flight at once. Results are returned in input order; the first rejection
+ * rejects the whole call.
+ */
+export async function mapConcurrent<TIn, TOut>(
+    items: TIn[],
+    concurrency: number,
+    worker: (item: TIn, index: number) => Promise<TOut>,
+): Promise<TOut[]> {
+    const results: TOut[] = new Array(items.length);
+    const limit = Math.max(1, Math.floor(concurrency));
+    let next = 0;
+    const run = async (): Promise<void> => {
+        for (;;) {
+            const index = next++;
+            if (index >= items.length) {
+                return;
+            }
+            results[index] = await worker(items[index], index);
+        }
+    };
+    const runners: Promise<void>[] = [];
+    for (let i = 0; i < Math.min(limit, items.length); i++) {
+        runners.push(run());
+    }
+    await Promise.all(runners);
+    return results;
 }

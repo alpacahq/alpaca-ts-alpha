@@ -3,10 +3,15 @@
  *
  * - GET /stream            Server-Sent Events of live bars for the configured symbols.
  * - GET /price?symbol=AAPL Latest trade price (REST).
- * - GET /bars?symbol=AAPL  Historical daily bars (REST, auto-paginated).
+ * - GET /bars?symbol=AAPL  Historical bars as canonical `Bar`s (REST, auto-paginated).
+ * - GET /candles?symbol=AAPL Historical bars as chart-ready columnar `Candles`.
  *
  * Demonstrates: a long-lived market-data WebSocket fanned out to many HTTP
- * clients, plus REST helpers and auto-pagination - no extra web framework.
+ * clients, plus REST helpers and auto-pagination - no extra web framework. The
+ * live `/stream` bars and the historical `/bars` share ONE shape (`Bar`), so a
+ * frontend can backfill history then append live updates without remapping.
+ * Upstream failures are surfaced as typed `ApiError`s, mapped to the right HTTP
+ * status with Alpaca's request id for debugging.
  *
  * Run:
  *   APCA_KEY_ID=... APCA_SECRET=... npx tsx examples/marketdata-backend.ts
@@ -14,8 +19,8 @@
  *   curl http://localhost:8080/price?symbol=AAPL
  */
 import * as http from "node:http";
-// In your own app this import is just: import { Alpaca, TimeFrame } from "@alpaca/sdk";
-import { Alpaca, TimeFrame } from "../src/index";
+// In your own app this import is just: import { Alpaca, TimeFrame, ApiError } from "@alpacahq/alpaca-ts-alpha";
+import { Alpaca, TimeFrame, ApiError } from "../src/index";
 
 const keyId = process.env.APCA_KEY_ID;
 const secret = process.env.APCA_SECRET;
@@ -67,7 +72,8 @@ const server = http.createServer(async (req, res) => {
         }
         if (url.pathname === "/bars") {
             const symbol = url.searchParams.get("symbol") ?? SYMBOLS[0];
-            const bars = await alpaca.marketData.collectStockBarsBySymbol({
+            // Canonical Bar[] - the same shape the /stream bars arrive in.
+            const bars = await alpaca.marketData.getStockBars({
                 symbols: [symbol],
                 timeframe: TimeFrame.Day,
                 start: new Date(url.searchParams.get("start") ?? "2024-01-01"),
@@ -75,9 +81,26 @@ const server = http.createServer(async (req, res) => {
             sendJson(res, 200, bars);
             return;
         }
+        if (url.pathname === "/candles") {
+            const symbol = url.searchParams.get("symbol") ?? SYMBOLS[0];
+            // Columnar { time[], open[], high[], low[], close[], volume[] } for charts.
+            const candles = await alpaca.marketData.getStockCandles({
+                symbols: [symbol],
+                timeframe: TimeFrame.Day,
+                start: new Date(url.searchParams.get("start") ?? "2024-01-01"),
+            });
+            sendJson(res, 200, candles);
+            return;
+        }
         sendJson(res, 404, { error: "not found" });
     } catch (err) {
-        sendJson(res, 500, { error: (err as Error).message });
+        // Map an upstream Alpaca failure to its real status, and surface the
+        // request id so the failure is traceable in Alpaca's systems.
+        if (err instanceof ApiError) {
+            sendJson(res, err.status, { error: err.message, code: err.code, requestId: err.requestId });
+        } else {
+            sendJson(res, 500, { error: (err as Error).message });
+        }
     }
 });
 

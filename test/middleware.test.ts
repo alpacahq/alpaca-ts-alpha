@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { loggingMiddleware, metricsMiddleware, type RequestMetric } from '../src/middleware';
 import { Alpaca } from '../src/client';
-import * as trading from '../src/trading';
+import type * as trading from '../src/trading';
 
 const CREDS = { keyId: 'AKTEST', secret: 'sekret' };
 

@@ -6,10 +6,10 @@
  */
 import {
     AlpacaWebSocket,
-    AlpacaWebSocketOptions,
+    type AlpacaWebSocketOptions,
     EVENT,
 } from "./websocket";
-import { mapTradeUpdate, TradeUpdate } from "./types";
+import { mapTradeUpdate, type TradeUpdate } from "./types";
 
 export const TRADING_STREAM_PAPER = "wss://paper-api.alpaca.markets/stream";
 export const TRADING_STREAM_LIVE = "wss://api.alpaca.markets/stream";
@@ -69,7 +69,7 @@ export class TradingStream extends AlpacaWebSocket {
         const frame = message as TradingFrame;
         switch (frame.stream) {
             case "authorization":
-                if (frame.data?.["status"] === "authorized") {
+                if (frame.data?.status === "authorized") {
                     this.onAuthenticated();
                 } else {
                     this.emit(EVENT.CLIENT_ERROR, "auth failed");
@@ -77,7 +77,7 @@ export class TradingStream extends AlpacaWebSocket {
                 }
                 break;
             case "listening":
-                this.emit(EVENT.SUBSCRIPTION, frame.data?.["streams"] ?? []);
+                this.emit(EVENT.SUBSCRIPTION, frame.data?.streams ?? []);
                 break;
             case "trade_updates":
                 this.emit(

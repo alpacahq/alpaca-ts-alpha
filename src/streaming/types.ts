@@ -8,6 +8,7 @@
  * `Date`. News timestamps arrive as RFC-3339 strings.
  */
 import { OrderFromJSON, type Order } from "../trading";
+import type { Bar, Trade, Quote } from "../marketDataShapes";
 
 function toDate(value: unknown): Date {
     if (value instanceof Date) {
@@ -33,16 +34,16 @@ export interface RawTrade {
     z?: string;
 }
 
-export interface StreamTrade {
+/**
+ * A streamed trade. The canonical {@link Trade} with the fields the live feed
+ * always provides promoted to required, so REST and stream trades share one type.
+ */
+export type StreamTrade = Trade & {
     symbol: string;
     id: number;
     exchange: string;
-    price: number;
-    size: number;
-    timestamp: Date;
     conditions: string[];
-    tape?: string;
-}
+};
 
 export function mapTrade(raw: RawTrade): StreamTrade {
     return {
@@ -73,18 +74,14 @@ export interface RawQuote {
     z?: string;
 }
 
-export interface StreamQuote {
+/**
+ * A streamed quote. The canonical {@link Quote} with the fields the live feed
+ * always provides promoted to required, so REST and stream quotes share one type.
+ */
+export type StreamQuote = Quote & {
     symbol: string;
-    bidExchange?: string;
-    bidPrice: number;
-    bidSize: number;
-    askExchange?: string;
-    askPrice: number;
-    askSize: number;
-    timestamp: Date;
     conditions: string[];
-    tape?: string;
-}
+};
 
 export function mapQuote(raw: RawQuote): StreamQuote {
     return {
@@ -116,17 +113,11 @@ export interface RawBar {
     n?: number;
 }
 
-export interface StreamBar {
-    symbol: string;
-    open: number;
-    high: number;
-    low: number;
-    close: number;
-    volume: number;
-    timestamp: Date;
-    vwap?: number;
-    tradeCount?: number;
-}
+/**
+ * A streamed bar. The canonical {@link Bar} with `symbol` promoted to required,
+ * so REST and stream bars share one type.
+ */
+export type StreamBar = Bar & { symbol: string };
 
 export function mapBar(raw: RawBar): StreamBar {
     return {
@@ -427,15 +418,15 @@ export interface TradeUpdate {
 }
 
 export function mapTradeUpdate(data: Record<string, unknown>): TradeUpdate {
-    const ts = data["timestamp"];
+    const ts = data.timestamp;
     return {
         ...data,
-        event: String(data["event"] ?? "") as TradeUpdateEvent,
+        event: String(data.event ?? "") as TradeUpdateEvent,
         timestamp: typeof ts === "string" ? toDate(ts) : undefined,
-        order: OrderFromJSON((data["order"] as Record<string, unknown>) ?? {}),
-        executionId: data["execution_id"] as string | undefined,
-        price: data["price"] as string | undefined,
-        qty: data["qty"] as string | undefined,
-        positionQty: data["position_qty"] as string | undefined,
+        order: OrderFromJSON((data.order as Record<string, unknown>) ?? {}),
+        executionId: data.execution_id as string | undefined,
+        price: data.price as string | undefined,
+        qty: data.qty as string | undefined,
+        positionQty: data.position_qty as string | undefined,
     };
 }

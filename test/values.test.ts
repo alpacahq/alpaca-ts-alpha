@@ -10,7 +10,7 @@ import {
     toNumber,
     toNumberOr,
 } from '../src/values';
-import * as marketData from '../src/market-data';
+import type * as marketData from '../src/market-data';
 
 describe('toNumber', () => {
     it('parses numeric strings', () => {

@@ -12,7 +12,7 @@
  * The underlying socket is created through an injectable `wsFactory` so tests
  * can supply a fake (mirrors the `fetchApi` override on the REST runtime).
  */
-import { EventEmitter } from "events";
+import { EventEmitter } from "node:events";
 import { WebSocket } from "ws";
 import { decode as msgpackDecode, encode as msgpackEncode } from "@msgpack/msgpack";
 
@@ -69,7 +69,7 @@ export type Codec = "msgpack" | "json";
 
 /** The minimal socket surface this client relies on (satisfied by `ws`). */
 export interface WebSocketLike {
-    on(event: string, listener: (...args: any[]) => void): unknown;
+    on(event: string, listener: (...args: unknown[]) => void): unknown;
     send(data: string | Uint8Array): void;
     close(code?: number, reason?: string): void;
     terminate?(): void;
@@ -165,8 +165,8 @@ export abstract class AlpacaWebSocket extends EventEmitter {
         this.conn = socket;
         socket.on("open", () => this.handleOpen());
         socket.on("message", (data: unknown) => this.handleRawMessage(data));
-        socket.on("error", (err: Error) =>
-            this.emit(EVENT.CLIENT_ERROR, err?.message ?? String(err)),
+        socket.on("error", (err: unknown) =>
+            this.emit(EVENT.CLIENT_ERROR, err instanceof Error ? err.message : String(err)),
         );
         socket.on("close", () => this.handleClose());
         socket.on("pong", () => this.clearPongTimeout());

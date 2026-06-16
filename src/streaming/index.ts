@@ -5,7 +5,7 @@
  *
  * @example Market data (data-visualization backend)
  * ```ts
- * import { streaming } from "@alpaca/sdk";
+ * import { streaming } from "@alpacahq/alpaca-ts-alpha";
  *
  * const stocks = new streaming.StockDataStream({
  *   credentials: { keyId, secret },
@@ -18,7 +18,7 @@
  *
  * @example Trade updates (trading bot)
  * ```ts
- * import { streaming } from "@alpaca/sdk";
+ * import { streaming } from "@alpacahq/alpaca-ts-alpha";
  *
  * const trading = new streaming.TradingStream({ credentials: { keyId, secret }, paper: true });
  * trading.onTradeUpdate((u) => console.log(u.event, u.order.symbol)); // u.order is a typed Order
@@ -45,7 +45,7 @@ import { provideStreaming } from "../streamingRegistry";
 // Register the streaming implementation so the REST facade can construct stream
 // clients without a static dependency on this module (and its `ws`/msgpack
 // deps). Runs whenever this module is loaded - i.e. always for the main
-// `@alpaca/sdk` entrypoint, never for `@alpaca/sdk/rest`.
+// `@alpacahq/alpaca-ts-alpha` entrypoint, never for `@alpacahq/alpaca-ts-alpha/rest`.
 provideStreaming({
     TradingStream,
     StockDataStream,

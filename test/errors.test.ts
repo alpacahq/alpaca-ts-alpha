@@ -87,6 +87,27 @@ describe('buildApiError - rate-limit metadata', () => {
     });
 });
 
+describe('buildApiError - request id', () => {
+    it('surfaces X-Request-ID onto the error', async () => {
+        const err = await buildApiError(
+            errorResponse(500, { message: 'oops' }, { 'X-Request-ID': 'abc-123' }),
+        );
+        expect(err.requestId).toBe('abc-123');
+    });
+
+    it('reads the header case-insensitively', async () => {
+        const err = await buildApiError(
+            errorResponse(404, { message: 'missing' }, { 'x-request-id': 'lower-456' }),
+        );
+        expect(err.requestId).toBe('lower-456');
+    });
+
+    it('leaves requestId undefined when the header is absent', async () => {
+        const err = await buildApiError(errorResponse(400, { message: 'bad' }));
+        expect(err.requestId).toBeUndefined();
+    });
+});
+
 describe('buildApiError - body parsing fallbacks', () => {
     it('keeps the raw Response and a default message for an empty body', async () => {
         const res = errorResponse(503, '');

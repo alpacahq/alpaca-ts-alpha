@@ -316,7 +316,7 @@ describe('TradingStream (order updates)', () => {
 
         expect(updates).toHaveLength(1);
         expect(updates[0]).toMatchObject({ event: 'fill', price: '187.25', qty: '10' });
-        expect(updates[0].order['symbol']).toBe('AAPL');
+        expect(updates[0].order.symbol).toBe('AAPL');
     });
 
     it('errors and disconnects on failed authorization', () => {
@@ -696,12 +696,12 @@ describe('stream mappers', () => {
         expect(u.timestamp).toBeInstanceOf(Date);
         expect(u.executionId).toBe('exec-1');
         expect(u.positionQty).toBe('5');
-        expect(u.order['symbol']).toBe('AAPL');
+        expect(u.order.symbol).toBe('AAPL');
         // order is a deserialized Order: snake_case wire keys are mapped to camelCase...
         expect(u.order.clientOrderId).toBe('cid-1');
         expect(u.order.filledQty).toBe('10');
         // ...and the raw snake_case keys are still preserved via passthrough.
-        expect(u.order['client_order_id']).toBe('cid-1');
+        expect(u.order.client_order_id).toBe('cid-1');
         expect((u as any).extra).toBe('keep-me');
     });
 

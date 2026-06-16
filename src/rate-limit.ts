@@ -113,7 +113,10 @@ export class RateLimiter {
     private drain(): void {
         this.refill();
         while (this.queue.length > 0 && this.tokens >= 1 && this.active < this.maxConcurrent) {
-            const waiter = this.queue.shift()!;
+            const waiter = this.queue.shift();
+            if (!waiter) {
+                break;
+            }
             if (waiter.settled) {
                 continue; // aborted while queued
             }
@@ -152,8 +155,9 @@ export class RateLimiter {
             this.drain();
         }, wait);
         // Don't keep the process alive just for the limiter (Node only).
-        if (typeof (this.timer as { unref?: () => void }).unref === "function") {
-            (this.timer as { unref?: () => void }).unref!();
+        const timer = this.timer as { unref?: () => void };
+        if (typeof timer.unref === "function") {
+            timer.unref();
         }
     }
 

@@ -1,10 +1,12 @@
 import { describe, it, expect } from 'vitest';
 
 import {
+    chunk,
     collect,
     collectBySymbol,
     collectCursor,
     collectSymbolObjects,
+    mapConcurrent,
     paginate,
     paginateCursor,
     paginateSymbolMap,
@@ -76,6 +78,34 @@ describe('G04 pagination helpers', () => {
         const all = await collect<number>(async () => ({ items: undefined as unknown as number[], nextPageToken: null }));
         expect(all).toEqual([]);
     });
+
+    it('collect() honors maxItems, truncating the page and not fetching further', async () => {
+        let fetches = 0;
+        const all = await collect<number>(async (token) => {
+            fetches += 1;
+            return threePages[token ?? ''];
+        }, { maxItems: 3 });
+        expect(all).toEqual([1, 2, 3]);
+        expect(fetches).toBe(2); // stopped after the page that satisfied the cap
+    });
+
+    it('collectCursor() honors maxItems', async () => {
+        let fetches = 0;
+        const byToken: Record<string, Array<{ id: string; n: number }>> = {
+            '': [{ id: 'a', n: 1 }, { id: 'b', n: 2 }],
+            b: [{ id: 'c', n: 3 }],
+            c: [],
+        };
+        const out = await collectCursor<{ id: string; n: number }>({
+            fetchPage: (token) => {
+                fetches += 1;
+                return Promise.resolve(byToken[token ?? '']);
+            },
+            getCursor: (last) => last.id,
+        }, { maxItems: 2 });
+        expect(out.map((i) => i.n)).toEqual([1, 2]);
+        expect(fetches).toBe(1);
+    });
 });
 
 describe('symbol-map pagination', () => {
@@ -119,6 +149,68 @@ describe('symbol-map pagination', () => {
             nextPageToken: null,
         }));
         expect(merged).toEqual({});
+    });
+
+    it('collectBySymbol caps each symbol at maxPerSymbol', async () => {
+        const merged = await collectBySymbol<number>(async (token) => pages[token ?? ''], { maxPerSymbol: 2 });
+        expect(merged).toEqual({ AAPL: [1, 2], MSFT: [10, 11] });
+    });
+
+    it('collectBySymbol stops early once every expected symbol is capped', async () => {
+        let fetches = 0;
+        const merged = await collectBySymbol<number>(async (token) => {
+            fetches += 1;
+            return pages[token ?? ''];
+        }, { maxPerSymbol: 1, symbols: ['AAPL', 'MSFT'] });
+        expect(merged).toEqual({ AAPL: [1], MSFT: [10] });
+        expect(fetches).toBe(1); // both symbols filled on page one
+    });
+
+    it('collectBySymbol without expected symbols caps but still paginates', async () => {
+        let fetches = 0;
+        const merged = await collectBySymbol<number>(async (token) => {
+            fetches += 1;
+            return pages[token ?? ''];
+        }, { maxPerSymbol: 1 });
+        expect(merged).toEqual({ AAPL: [1], MSFT: [10] });
+        expect(fetches).toBe(2); // cannot prove a later page has no new symbol
+    });
+});
+
+describe('bounded concurrency helpers', () => {
+    it('chunk splits into consecutive groups of at most size', () => {
+        expect(chunk([1, 2, 3, 4, 5], 2)).toEqual([[1, 2], [3, 4], [5]]);
+        expect(chunk([1, 2, 3], 10)).toEqual([[1, 2, 3]]);
+        expect(chunk<number>([], 2)).toEqual([]);
+        expect(chunk([1, 2, 3], 0)).toEqual([[1], [2], [3]]); // size floored to 1
+    });
+
+    it('mapConcurrent preserves input order in results', async () => {
+        const out = await mapConcurrent([1, 2, 3, 4], 2, async (n) => n * 10);
+        expect(out).toEqual([10, 20, 30, 40]);
+    });
+
+    it('mapConcurrent never exceeds the concurrency limit', async () => {
+        let inFlight = 0;
+        let peak = 0;
+        const work = async (n: number) => {
+            inFlight += 1;
+            peak = Math.max(peak, inFlight);
+            await new Promise((r) => setTimeout(r, 5));
+            inFlight -= 1;
+            return n;
+        };
+        await mapConcurrent([1, 2, 3, 4, 5, 6], 2, work);
+        expect(peak).toBeLessThanOrEqual(2);
+    });
+
+    it('mapConcurrent rejects if any worker rejects', async () => {
+        await expect(
+            mapConcurrent([1, 2, 3], 2, async (n) => {
+                if (n === 2) throw new Error('boom');
+                return n;
+            }),
+        ).rejects.toThrow('boom');
     });
 });
 

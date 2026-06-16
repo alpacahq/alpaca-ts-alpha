@@ -1,7 +1,7 @@
 /**
- * REST-only entrypoint (`@alpaca/sdk/rest`).
+ * REST-only entrypoint (`@alpacahq/alpaca-ts-alpha/rest`).
  *
- * Identical to the main `@alpaca/sdk` entrypoint EXCEPT it does not export (or
+ * Identical to the main `@alpacahq/alpaca-ts-alpha` entrypoint EXCEPT it does not export (or
  * load) the `streaming` namespace. Importing from here keeps the `ws` and
  * `@msgpack/msgpack` runtime dependencies out of your module graph - useful for
  * REST-only services, serverless/edge bundles, and faster cold starts.
@@ -10,10 +10,11 @@
  * methods (and pagination, order builders, `getLatestPrice`, `closeAllPositions`)
  * work unchanged. The stream factories (`stockStream`, `stream`, ...) and
  * `submitAndWait` exist but throw if called, since `streaming` is not loaded
- * here; import from `@alpaca/sdk` if you need real-time streams.
+ * here; import from `@alpacahq/alpaca-ts-alpha` if you need real-time streams.
  */
 export * as trading from './trading';
 export * as marketData from './market-data';
+export * as marketDataShapes from './marketDataShapes';
 export * as pagination from './pagination';
 export * as auth from './auth';
 export * as values from './values';
@@ -24,10 +25,22 @@ export * as capabilities from './capabilities';
 export * as middleware from './middleware';
 
 export { Alpaca, TradingClient, MarketDataClient, OrdersApi, LIVE_TRADING_BASE_PATH, DEFAULT_RATE_LIMIT } from './client';
-export type { AlpacaClientOptions } from './client';
+export type { AlpacaClientOptions, SymbolCollectOptions } from './client';
 
 export { TimeFrame, TimeFrameUnit, timeFrame } from './values';
 export type { Money } from './values';
+
+export { toCandles, toCandlestickSeries, toLineSeries } from './marketDataShapes';
+export type {
+    Bar,
+    Trade,
+    Quote,
+    Candles,
+    CandlestickPoint,
+    LinePoint,
+    TimeUnit,
+    ChartOptions,
+} from './marketDataShapes';
 
 export {
     ResponseError,
@@ -44,5 +57,5 @@ export type { RateLimitInfo } from './errors';
 export { RateLimiter } from './rate-limit';
 export type { RateLimitConfig } from './rate-limit';
 
-export { findCapabilities, streamingCapabilities } from './capabilities';
-export type { CapabilityEntry, StreamCapabilityEntry, CapabilityGroup } from './capabilities';
+export { findCapabilities, findErgonomic, streamingCapabilities, ergonomicCapabilities } from './capabilities';
+export type { CapabilityEntry, StreamCapabilityEntry, CapabilityGroup, ErgonomicHelperEntry, ErgonomicKind } from './capabilities';

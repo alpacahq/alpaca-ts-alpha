@@ -122,8 +122,8 @@ describe('G02 undocumented field passthrough', () => {
     for (const { name, fn, base } of G02_CASES) {
         it(`${name}: exposes wire fields the frozen spec does not declare`, () => {
             const result = fn({ ...base, undocumented_field: 'keep-me', another_extra: 42 });
-            expect(result['undocumented_field']).toBe('keep-me');
-            expect(result['another_extra']).toBe(42);
+            expect(result.undocumented_field).toBe('keep-me');
+            expect(result.another_extra).toBe(42);
         });
     }
 
@@ -136,8 +136,8 @@ describe('G02 undocumented field passthrough', () => {
             position_market_value: '500',
         });
         expect(result.buyingPower).toBe('1000'); // documented mapping (camelCase)
-        expect(result['effective_buying_power']).toBe('2000'); // undocumented passthrough
-        expect(result['position_market_value']).toBe('500');
+        expect(result.effective_buying_power).toBe('2000'); // undocumented passthrough
+        expect(result.position_market_value).toBe('500');
     });
 
     it('Account: ToJSON does not re-emit undocumented passthrough keys (round-trip is clean)', () => {

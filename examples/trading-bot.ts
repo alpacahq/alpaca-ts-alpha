@@ -1,15 +1,18 @@
 /**
  * Minimal paper trading bot.
  *
- * Demonstrates: the `Alpaca` facade, reading the account, a market-data lookup,
- * the trade-updates stream, and `submitAndWait` (place an order and block until
- * it reaches a terminal state).
+ * Demonstrates: the `Alpaca` facade, reading the account (with the `values`
+ * money helpers), a market-data lookup, the ergonomic order builders
+ * (`orders.limit`), the trade-updates stream, `submitAndWait` (place an order
+ * and block until it reaches a terminal state), and typed-error handling
+ * branching on the `ApiError` subclasses.
  *
  * Run:
  *   APCA_KEY_ID=... APCA_SECRET=... npx tsx examples/trading-bot.ts
  */
-// In your own app this import is just: import { Alpaca, ApiError } from "@alpaca/sdk";
-import { Alpaca, ApiError } from "../src/index";
+// In your own app this import is just:
+//   import { Alpaca, ApiError, RateLimitError, values } from "@alpacahq/alpaca-ts-alpha";
+import { Alpaca, ApiError, RateLimitError, values } from "../src/index";
 
 async function main(): Promise<void> {
     const keyId = process.env.APCA_KEY_ID;
@@ -27,8 +30,14 @@ async function main(): Promise<void> {
         retry: { maxRetries: 3 }, // covers transient 5xx AND network errors on GETs
     });
 
+    // Money/quantity fields are wire-truthful strings; format them for display
+    // with the `values` helpers instead of printing the raw string.
     const account = await alpaca.trading.account.getAccount();
-    console.log(`account ${account.accountNumber} status=${account.status} buyingPower=${account.buyingPower}`);
+    console.log(
+        `account ${account.accountNumber} status=${account.status} ` +
+            `buyingPower=${values.formatMoney(account.buyingPower)} ` +
+            `equity=${values.formatMoney(account.equity)}`,
+    );
 
     const price = await alpaca.marketData.getLatestPrice("AAPL");
     console.log(`AAPL last trade: ${price ?? "n/a"}`);
@@ -40,6 +49,28 @@ async function main(): Promise<void> {
     updates.onConnect(() => updates.subscribeTradeUpdates());
     updates.connect();
 
+    // Ergonomic order builder: a limit buy well below the market rests without
+    // filling. The typed `orders.limit` builder requires `limitPrice` at compile
+    // time and accepts `number | string` amounts. We place then cancel it to
+    // show both the builder and a raw generated method (`deleteOrderByOrderID`).
+    try {
+        const resting = await alpaca.trading.orders.limit({
+            symbol: "AAPL",
+            qty: 1,
+            side: "buy",
+            limitPrice: Math.max(1, Math.floor((price ?? 100) * 0.5)),
+        });
+        console.log(`placed resting limit order ${resting.id} @ ${resting.limitPrice}`);
+        if (resting.id) {
+            await alpaca.trading.orders.deleteOrderByOrderID({ orderId: resting.id });
+            console.log(`canceled ${resting.id}`);
+        }
+    } catch (err) {
+        reportError("limit order", err);
+    }
+
+    // `submitAndWait` places an order and resolves once it reaches a terminal
+    // state, observed over the trade-updates stream.
     try {
         const order = await alpaca.trading.submitAndWait(
             { type: "market", symbol: "AAPL", qty: 1, side: "buy" },
@@ -47,13 +78,20 @@ async function main(): Promise<void> {
         );
         console.log(`order ${order.id} reached ${order.status} (filledAvgPrice=${order.filledAvgPrice ?? "n/a"})`);
     } catch (err) {
-        if (err instanceof ApiError) {
-            console.error(`order rejected: HTTP ${err.status} ${err.message}`);
-        } else {
-            console.error("submitAndWait failed:", (err as Error).message);
-        }
+        reportError("submitAndWait", err);
     } finally {
         updates.disconnect();
+    }
+}
+
+/** Branch on the typed-error subclasses; always log the request id on an ApiError. */
+function reportError(label: string, err: unknown): void {
+    if (err instanceof RateLimitError) {
+        console.error(`${label} rate limited; retry in ${err.retryAfterMs ?? "?"}ms (request ${err.requestId})`);
+    } else if (err instanceof ApiError) {
+        console.error(`${label} rejected: HTTP ${err.status} ${err.code ?? ""} ${err.message} (request ${err.requestId})`);
+    } else {
+        console.error(`${label} failed:`, (err as Error).message);
     }
 }
 

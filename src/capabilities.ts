@@ -12,6 +12,43 @@
  * exhaustive dump of every generated method (each REST method also has a
  * `...Raw()` variant returning the raw `Response`). Hand-written and
  * generation-safe.
+ *
+ * ## The facade has two layers
+ *
+ * The {@link Alpaca} client is intentionally NOT "all-or-nothing". It is two
+ * layers, and knowing which is which is the whole mental model:
+ *
+ *   1. **Generated (always present, uniform).** Every generated REST method is
+ *      reachable raw at `alpaca.<group>.<resource>.<method>(...)` — e.g.
+ *      `alpaca.trading.assets.getV2Assets()`. Nothing is ever hidden or
+ *      removed. This layer is enumerated by {@link capabilities} and located
+ *      with {@link findCapabilities}.
+ *   2. **Ergonomic (additive, never replaces layer 1).** A curated set of
+ *      hand-written conveniences layered on top: order builders, normalized
+ *      market-data accessors, pagination, and workflow helpers. They are
+ *      *additions* — the raw method they build on is still available. This
+ *      layer is enumerated by {@link ergonomicCapabilities} and located with
+ *      {@link findErgonomic}.
+ *
+ * So the rule an agent can rely on: if you don't see an ergonomic helper for
+ * what you need, the raw generated method is always there. Streaming factories
+ * are a third map, {@link streamingCapabilities}.
+ *
+ * ## Ergonomic naming conventions
+ *
+ * The ergonomic layer follows predictable conventions so the helpers are
+ * guessable rather than memorized:
+ *
+ *   - **Order builders:** one verb method per order kind on `trading.orders`
+ *     (`market` / `limit` / `stop` / `stopLimit` / `trailingStop` / `bracket` /
+ *     `oco` / `oto`), plus a generic `submit` escape hatch.
+ *   - **Normalized REST:** `get<Asset><Thing>` returns canonical, symbol-keyed
+ *     shapes (`getStockBars`, `getCryptoTrades`, ...); `get<Asset>Candles`
+ *     returns the chart-ready columnar form.
+ *   - **Pagination:** `iterate<X>` lazily yields across pages; `collect<X>` /
+ *     `collect<X>BySymbol` eagerly returns them.
+ *   - **Workflow:** verb-named one-offs (`submitAndWait`, `closeAllPositions`,
+ *     `getLatestPrice`).
  */
 
 /** Which facade sub-client tree an `Api` lives under. */
@@ -371,6 +408,153 @@ export const streamingCapabilities: readonly StreamCapabilityEntry[] = [
 export function findCapabilities(methodName: string): CapabilityEntry[] {
     const needle = methodName.toLowerCase();
     return capabilities.filter((entry) =>
+        entry.methods.some((m) => m.toLowerCase() === needle),
+    );
+}
+
+/** Which kind of ergonomic helper an {@link ErgonomicHelperEntry} groups. */
+export type ErgonomicKind = "orderBuilder" | "workflow" | "normalized" | "pagination";
+
+/**
+ * One row of the ergonomic (layer 2) map: a group of hand-written convenience
+ * methods that live on a facade object and build on the generated layer.
+ */
+export interface ErgonomicHelperEntry {
+    /** Object the helpers live on, e.g. `"trading.orders"`, `"trading"`, `"marketData"`. */
+    accessor: string;
+    /** Sub-client tree the helpers live in. */
+    group: CapabilityGroup;
+    /** What kind of ergonomic helper this row groups. */
+    kind: ErgonomicKind;
+    /** One-line description of what the helpers are for. */
+    summary: string;
+    /** Generated method/accessor these build on, when applicable. */
+    wraps?: string;
+    /** The ergonomic method names available on {@link accessor}. */
+    methods: string[];
+}
+
+/**
+ * Ergonomic (layer 2) capability map: the additive conveniences layered on top
+ * of the generated APIs. Each row lists the helper methods on a facade object;
+ * the raw generated methods they build on remain available (see
+ * {@link capabilities}). Keep this in sync with {@link "./client"} — a test
+ * asserts every listed helper exists on the facade.
+ */
+export const ergonomicCapabilities: readonly ErgonomicHelperEntry[] = [
+    // --- Trading ---------------------------------------------------------
+    {
+        accessor: "trading.orders",
+        group: "trading",
+        kind: "orderBuilder",
+        summary: "One typed builder per order kind; drops the postOrder wrapper and enforces required fields at compile time.",
+        wraps: "OrdersApi.postOrder",
+        methods: ["market", "limit", "stop", "stopLimit", "trailingStop", "bracket", "oco", "oto", "submit"],
+    },
+    {
+        accessor: "trading",
+        group: "trading",
+        kind: "workflow",
+        summary: "High-level trading flows that would otherwise be boilerplate.",
+        methods: ["submitAndWait", "closeAllPositions"],
+    },
+    {
+        accessor: "trading",
+        group: "trading",
+        kind: "pagination",
+        summary: "Auto-paginated iterate/collect helpers for option contracts and account activities.",
+        methods: [
+            "iterateOptionsContracts",
+            "collectOptionsContracts",
+            "iterateActivities",
+            "collectActivities",
+            "iterateActivitiesByType",
+            "collectActivitiesByType",
+        ],
+    },
+
+    // --- Market data -----------------------------------------------------
+    {
+        accessor: "marketData",
+        group: "marketData",
+        kind: "workflow",
+        summary: "High-level market-data flows that would otherwise be boilerplate.",
+        methods: ["getLatestPrice"],
+    },
+    {
+        accessor: "marketData",
+        group: "marketData",
+        kind: "normalized",
+        summary: "Auto-paginated, symbol-keyed accessors returning canonical Bar/Trade/Quote shapes (and chart-ready Candles), unified with the streaming layer.",
+        methods: [
+            "getStockBars",
+            "getCryptoBars",
+            "getOptionBars",
+            "getStockTrades",
+            "getCryptoTrades",
+            "getStockQuotes",
+            "getCryptoQuotes",
+            "getStockCandles",
+            "getCryptoCandles",
+        ],
+    },
+    {
+        accessor: "marketData",
+        group: "marketData",
+        kind: "pagination",
+        summary: "Auto-paginated iterate/collect helpers across every paginated market-data endpoint; the page token is managed for you.",
+        methods: [
+            "iterateStockBars",
+            "collectStockBarsBySymbol",
+            "iterateStockTrades",
+            "collectStockTradesBySymbol",
+            "iterateStockQuotes",
+            "collectStockQuotesBySymbol",
+            "iterateStockAuctions",
+            "collectStockAuctionsBySymbol",
+            "iterateCryptoBars",
+            "collectCryptoBarsBySymbol",
+            "iterateCryptoTrades",
+            "collectCryptoTradesBySymbol",
+            "iterateCryptoQuotes",
+            "collectCryptoQuotesBySymbol",
+            "iterateOptionBars",
+            "collectOptionBarsBySymbol",
+            "iterateOptionTrades",
+            "collectOptionTradesBySymbol",
+            "iterateIndexValues",
+            "collectIndexValuesBySymbol",
+            "iterateForexRates",
+            "collectForexRatesBySymbol",
+            "iterateOptionSnapshots",
+            "collectOptionSnapshotsBySymbol",
+            "iterateOptionChain",
+            "collectOptionChainBySymbol",
+            "iterateStockBarSingle",
+            "collectStockBarSingle",
+            "iterateStockTradeSingle",
+            "collectStockTradeSingle",
+            "iterateStockQuoteSingle",
+            "collectStockQuoteSingle",
+            "iterateStockAuctionSingle",
+            "collectStockAuctionSingle",
+            "iterateNews",
+            "collectNews",
+            "iterateCorporateActionsPages",
+            "collectCorporateActions",
+        ],
+    },
+] as const;
+
+/**
+ * Find the ergonomic helper entries whose `methods` include `methodName`.
+ * Useful for answering "is there a helper for this, and where?" - e.g.
+ * `findErgonomic("market")` returns `trading.orders`. Matching is
+ * case-insensitive.
+ */
+export function findErgonomic(methodName: string): ErgonomicHelperEntry[] {
+    const needle = methodName.toLowerCase();
+    return ergonomicCapabilities.filter((entry) =>
         entry.methods.some((m) => m.toLowerCase() === needle),
     );
 }

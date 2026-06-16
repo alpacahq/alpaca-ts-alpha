@@ -1,9 +1,12 @@
 {
-  "name": "@alpaca/sdk",
+  "name": "@alpacahq/alpaca-ts-alpha",
   "version": "0.0.0",
   "description": "TypeScript SDK for the Alpaca Trading and Market Data APIs (generated).",
   "license": "MIT",
   "type": "commonjs",
+  "engines": {
+    "node": ">=20"
+  },
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
@@ -48,8 +51,11 @@
   ],
   "scripts": {
     "build": "tsup",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc --noEmit && npm run typecheck:examples",
+    "typecheck:examples": "tsc --noEmit -p tsconfig.examples.json",
     "test": "vitest run",
+    "lint": "biome lint .",
+    "lint:fix": "biome lint --write .",
     "prepare": "npm run build"
   },
   "dependencies": {
@@ -60,6 +66,7 @@
     "esbuild": "^0.28.1"
   },
   "devDependencies": {
+    "@biomejs/biome": "2.5.0",
     "@types/node": "^22.0.0",
     "@types/ws": "^8.18.1",
     "tsup": "^8.5.1",

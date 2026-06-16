@@ -7,7 +7,7 @@
  */
 import {
     AlpacaWebSocket,
-    AlpacaWebSocketOptions,
+    type AlpacaWebSocketOptions,
     EVENT,
     CONN_ERROR,
 } from "./websocket";
@@ -21,15 +21,15 @@ import {
     mapQuote,
     mapStatus,
     mapTrade,
-    StreamBar,
-    StreamCancelError,
-    StreamCorrection,
-    StreamLuld,
-    StreamNews,
-    StreamOrderbook,
-    StreamQuote,
-    StreamStatus,
-    StreamTrade,
+    type StreamBar,
+    type StreamCancelError,
+    type StreamCorrection,
+    type StreamLuld,
+    type StreamNews,
+    type StreamOrderbook,
+    type StreamQuote,
+    type StreamStatus,
+    type StreamTrade,
 } from "./types";
 
 export const MARKET_DATA_STREAM_HOST = "wss://stream.data.alpaca.markets";

@@ -18,7 +18,7 @@
  *
  * @example
  * ```ts
- * import { Alpaca } from "@alpaca/sdk";
+ * import { Alpaca } from "@alpacahq/alpaca-ts-alpha";
  *
  * const alpaca = new Alpaca({ keyId, secret, paper: true });
  *
@@ -46,6 +46,7 @@ import { getStreaming } from "./streamingRegistry";
 import * as pagination from "./pagination";
 import * as orders from "./orders";
 import * as values from "./values";
+import * as marketDataShapes from "./marketDataShapes";
 
 /**
  * Live trading host. Paper trading uses the package default (`paper-api`).
@@ -137,11 +138,14 @@ function sharedRestConfig(options: AlpacaClientOptions): SharedRestConfig {
 /**
  * The generated {@link trading.OrdersApi} plus ergonomic order builders.
  *
- * Inherits every generated method (`postOrder`, `getAllOrders`,
- * `deleteOrderByOrderID`, ...) unchanged, and adds one method per common order
- * kind that drops the `postOrder({ postOrderRequest })` wrapper, accepts
- * `number | string` amounts, and requires the fields each kind needs at compile
- * time (see {@link orders}). Each returns the created {@link trading.Order}.
+ * Illustrates the SDK's two-layer model on one class: it *inherits* every
+ * generated method (`postOrder`, `getAllOrders`, `deleteOrderByOrderID`, ...)
+ * unchanged (layer 1, always available), and *adds* one ergonomic builder per
+ * common order kind (layer 2) that drops the `postOrder({ postOrderRequest })`
+ * wrapper, accepts `number | string` amounts, and requires the fields each kind
+ * needs at compile time (see {@link orders}). Each returns the created
+ * {@link trading.Order}. The additive builders never hide the raw `postOrder`;
+ * they are enumerated under `trading.orders` in `ergonomicCapabilities`.
  *
  * @example
  * ```ts
@@ -245,8 +249,20 @@ export interface SubmitAndWaitOptions {
 }
 
 /**
- * Trading sub-client. Lazily constructs (and memoizes) each trading `Api`
- * against a single shared {@link trading.Configuration}.
+ * Trading sub-client. Two layers in one object:
+ *
+ *   1. **Generated (always present).** Every trading `Api` is a lazily
+ *      constructed, memoized accessor — `account`, `accountActivities`,
+ *      `assets`, `calendar`, `corporateActions`, `orders`, `positions`,
+ *      `watchlists`, ... — each exposing its raw generated methods.
+ *   2. **Ergonomic (additive).** Hand-written conveniences on top: the order
+ *      builders on `orders` ({@link OrdersApi}), the workflow helpers
+ *      `submitAndWait` / `closeAllPositions`, and the `iterate*` / `collect*`
+ *      pagination helpers. These never replace a raw method.
+ *
+ * The ergonomic helpers on this client are enumerated in `ergonomicCapabilities`
+ * (find one with `findErgonomic`); the generated accessors in `capabilities`
+ * (find one with `findCapabilities`).
  */
 export class TradingClient {
     private readonly config: trading.Configuration;
@@ -516,9 +532,102 @@ type WithCurrencyPairList<T extends { currencyPairs: string }> = Omit<T, "curren
 /** Override a request's `timeframe` to require the branded {@link values.TimeFrameString}. */
 type WithTimeframe<T extends { timeframe: string }> = Omit<T, "timeframe"> & { timeframe: values.TimeFrameString };
 
+/** Reshape a `{ [symbol]: Bar[] }` map into a `{ [symbol]: Candles }` map. */
+function toCandlesBySymbol(
+    bars: { [symbol: string]: marketDataShapes.Bar[] },
+    opts?: marketDataShapes.ChartOptions,
+): { [symbol: string]: marketDataShapes.Candles } {
+    const out: { [symbol: string]: marketDataShapes.Candles } = {};
+    for (const symbol of Object.keys(bars)) {
+        out[symbol] = marketDataShapes.toCandles(bars[symbol], opts);
+    }
+    return out;
+}
+
 /**
- * Market-data sub-client. Lazily constructs (and memoizes) each market-data
- * `Api` against a single shared {@link marketData.Configuration}.
+ * Options for the multi-symbol `collect*BySymbol` (and normalized `get*`)
+ * market-data helpers. All optional; defaults preserve a single combined,
+ * unbounded request.
+ */
+export interface SymbolCollectOptions {
+    /**
+     * Keep at most this many records per symbol, stopping early once every
+     * requested symbol is full. Guards against unbounded per-symbol history
+     * (e.g. years of minute bars). Omit for "all pages".
+     */
+    maxPerSymbol?: number;
+    /**
+     * Fetch symbols in parallel with this many requests in flight. Default `1`
+     * (one combined request whose single page-token chain is followed
+     * sequentially, the historical behavior). Values > 1 split the symbol list
+     * (see {@link chunkSize}) and run the chunks concurrently; the client-side
+     * rate limiter still bounds the actual request rate.
+     */
+    concurrency?: number;
+    /** Symbols per request when {@link concurrency} > 1. Default `1`. */
+    chunkSize?: number;
+}
+
+/** Parse a symbols/currency-pairs argument into a trimmed, non-empty list. */
+function symbolList(symbols: string | string[]): string[] {
+    const list = Array.isArray(symbols) ? symbols : String(symbols).split(",");
+    return list.map((s) => s.trim()).filter((s) => s.length > 0);
+}
+
+/**
+ * Drive a symbol-keyed collect. With default options this issues one combined
+ * request and follows its page token to exhaustion. With `concurrency > 1` it
+ * splits the symbol list into `chunkSize` groups fetched concurrently (capped
+ * by `concurrency`); `maxPerSymbol` bounds each symbol's array either way.
+ */
+function collectSymbolMap<T>(
+    symbols: string | string[],
+    fetchPage: (symbolsCsv: string, pageToken?: string) => Promise<pagination.SymbolMapPage<T>>,
+    opts: SymbolCollectOptions = {},
+): Promise<{ [symbol: string]: T[] }> {
+    const list = symbolList(symbols);
+    const concurrency = opts.concurrency ?? 1;
+    if (concurrency <= 1 || list.length <= 1) {
+        return pagination.collectBySymbol<T>((pageToken) => fetchPage(list.join(","), pageToken), {
+            maxPerSymbol: opts.maxPerSymbol,
+            symbols: list,
+        });
+    }
+    const groups = pagination.chunk(list, opts.chunkSize ?? 1);
+    return pagination
+        .mapConcurrent(groups, concurrency, (group) =>
+            pagination.collectBySymbol<T>((pageToken) => fetchPage(group.join(","), pageToken), {
+                maxPerSymbol: opts.maxPerSymbol,
+                symbols: group,
+            }),
+        )
+        .then((maps) => {
+            const out: { [symbol: string]: T[] } = {};
+            for (const map of maps) {
+                for (const symbol of Object.keys(map)) {
+                    out[symbol] = map[symbol];
+                }
+            }
+            return out;
+        });
+}
+
+/**
+ * Market-data sub-client. Two layers in one object:
+ *
+ *   1. **Generated (always present).** Every market-data `Api` is a lazily
+ *      constructed, memoized accessor — `stocks`, `crypto`, `options`,
+ *      `forex`, `indices`, `news`, `screener`, ... — each exposing its raw
+ *      generated methods (which keep Alpaca's compact wire keys).
+ *   2. **Ergonomic (additive).** Hand-written conveniences on top: the
+ *      normalized `get<Asset><Thing>` / `get<Asset>Candles` accessors (canonical
+ *      symbol-keyed shapes, unified with streaming), the `getLatestPrice`
+ *      workflow helper, and the `iterate*` / `collect*` pagination helpers.
+ *      These never replace a raw method.
+ *
+ * The ergonomic helpers on this client are enumerated in `ergonomicCapabilities`
+ * (find one with `findErgonomic`); the generated accessors in `capabilities`
+ * (find one with `findCapabilities`).
  */
 export class MarketDataClient {
     private readonly config: marketData.Configuration;
@@ -618,6 +727,81 @@ export class MarketDataClient {
         return values.toNumber(resp.trade?.p);
     }
 
+    // --- Normalized market-data shapes -------------------------------------
+    //
+    // The same canonical `Bar`/`Trade`/`Quote` the streaming clients emit, so a
+    // dashboard can backfill history here and append live updates over the
+    // WebSocket without reconciling two shapes. Each method auto-paginates and
+    // returns a `{ [symbol]: T[] }` map; `get*Candles` reshape bars into the
+    // columnar form charting libraries consume.
+
+    /** Historical stock bars as canonical {@link marketDataShapes.Bar}s, keyed by symbol. */
+    async getStockBars(
+        req: Omit<WithTimeframe<WithSymbolList<marketData.StockBarsRequest>>, "pageToken">,
+        opts?: SymbolCollectOptions,
+    ): Promise<{ [symbol: string]: marketDataShapes.Bar[] }> {
+        return marketDataShapes.toBarsBySymbol(await this.collectStockBarsBySymbol(req, opts));
+    }
+    /** Historical crypto bars as canonical {@link marketDataShapes.Bar}s, keyed by symbol. */
+    async getCryptoBars(
+        req: Omit<WithTimeframe<WithSymbolList<marketData.CryptoBarsRequest>>, "pageToken">,
+        opts?: SymbolCollectOptions,
+    ): Promise<{ [symbol: string]: marketDataShapes.Bar[] }> {
+        return marketDataShapes.toBarsBySymbol(await this.collectCryptoBarsBySymbol(req, opts));
+    }
+    /** Historical option bars as canonical {@link marketDataShapes.Bar}s, keyed by symbol. */
+    async getOptionBars(
+        req: Omit<WithTimeframe<WithSymbolList<marketData.OptionBarsRequest>>, "pageToken">,
+        opts?: SymbolCollectOptions,
+    ): Promise<{ [symbol: string]: marketDataShapes.Bar[] }> {
+        return marketDataShapes.toBarsBySymbol(await this.collectOptionBarsBySymbol(req, opts));
+    }
+
+    /** Historical stock trades as canonical {@link marketDataShapes.Trade}s, keyed by symbol. */
+    async getStockTrades(
+        req: Omit<WithSymbolList<marketData.StockTradesRequest>, "pageToken">,
+        opts?: SymbolCollectOptions,
+    ): Promise<{ [symbol: string]: marketDataShapes.Trade[] }> {
+        return marketDataShapes.toTradesBySymbol(await this.collectStockTradesBySymbol(req, opts), marketDataShapes.toStockTrade);
+    }
+    /** Historical crypto trades as canonical {@link marketDataShapes.Trade}s, keyed by symbol. */
+    async getCryptoTrades(
+        req: Omit<WithSymbolList<marketData.CryptoTradesRequest>, "pageToken">,
+        opts?: SymbolCollectOptions,
+    ): Promise<{ [symbol: string]: marketDataShapes.Trade[] }> {
+        return marketDataShapes.toTradesBySymbol(await this.collectCryptoTradesBySymbol(req, opts), marketDataShapes.toCryptoTrade);
+    }
+
+    /** Historical stock quotes as canonical {@link marketDataShapes.Quote}s, keyed by symbol. */
+    async getStockQuotes(
+        req: Omit<WithSymbolList<marketData.StockQuotesRequest>, "pageToken">,
+        opts?: SymbolCollectOptions,
+    ): Promise<{ [symbol: string]: marketDataShapes.Quote[] }> {
+        return marketDataShapes.toQuotesBySymbol(await this.collectStockQuotesBySymbol(req, opts), marketDataShapes.toStockQuote);
+    }
+    /** Historical crypto quotes as canonical {@link marketDataShapes.Quote}s, keyed by symbol. */
+    async getCryptoQuotes(
+        req: Omit<WithSymbolList<marketData.CryptoQuotesRequest>, "pageToken">,
+        opts?: SymbolCollectOptions,
+    ): Promise<{ [symbol: string]: marketDataShapes.Quote[] }> {
+        return marketDataShapes.toQuotesBySymbol(await this.collectCryptoQuotesBySymbol(req, opts), marketDataShapes.toCryptoQuote);
+    }
+
+    /** Historical stock bars as chart-ready columnar {@link marketDataShapes.Candles}, keyed by symbol. */
+    async getStockCandles(
+        req: Omit<WithTimeframe<WithSymbolList<marketData.StockBarsRequest>>, "pageToken">,
+        opts?: SymbolCollectOptions & marketDataShapes.ChartOptions,
+    ): Promise<{ [symbol: string]: marketDataShapes.Candles }> {
+        return toCandlesBySymbol(await this.getStockBars(req, opts), opts);
+    }
+    /** Historical crypto bars as chart-ready columnar {@link marketDataShapes.Candles}, keyed by symbol. */
+    async getCryptoCandles(
+        req: Omit<WithTimeframe<WithSymbolList<marketData.CryptoBarsRequest>>, "pageToken">,
+        opts?: SymbolCollectOptions & marketDataShapes.ChartOptions,
+    ): Promise<{ [symbol: string]: marketDataShapes.Candles }> {
+        return toCandlesBySymbol(await this.getCryptoBars(req, opts), opts);
+    }
+
     // --- Pagination: multi-symbol endpoints --------------------------------
     //
     // `iterate*` yields flat `{ symbol, value }` records across every symbol and
@@ -631,9 +815,10 @@ export class MarketDataClient {
         );
     }
     /** Collect historical stock bars merged into a `{ [symbol]: StockBar[] }` map. */
-    collectStockBarsBySymbol(req: Omit<WithTimeframe<WithSymbolList<marketData.StockBarsRequest>>, "pageToken">) {
-        return pagination.collectBySymbol<marketData.StockBar>((pageToken) =>
-            this.stocks.stockBars({ ...req, symbols: values.normalizeSymbols(req.symbols), pageToken }).then((r) => ({ data: r.bars ?? {}, nextPageToken: r.nextPageToken })),
+    collectStockBarsBySymbol(req: Omit<WithTimeframe<WithSymbolList<marketData.StockBarsRequest>>, "pageToken">, opts?: SymbolCollectOptions) {
+        return collectSymbolMap<marketData.StockBar>(req.symbols, (symbols, pageToken) =>
+            this.stocks.stockBars({ ...req, symbols, pageToken }).then((r) => ({ data: r.bars ?? {}, nextPageToken: r.nextPageToken })),
+            opts,
         );
     }
 
@@ -644,9 +829,10 @@ export class MarketDataClient {
         );
     }
     /** Collect historical stock trades merged into a `{ [symbol]: StockTrade[] }` map. */
-    collectStockTradesBySymbol(req: Omit<WithSymbolList<marketData.StockTradesRequest>, "pageToken">) {
-        return pagination.collectBySymbol<marketData.StockTrade>((pageToken) =>
-            this.stocks.stockTrades({ ...req, symbols: values.normalizeSymbols(req.symbols), pageToken }).then((r) => ({ data: r.trades ?? {}, nextPageToken: r.nextPageToken })),
+    collectStockTradesBySymbol(req: Omit<WithSymbolList<marketData.StockTradesRequest>, "pageToken">, opts?: SymbolCollectOptions) {
+        return collectSymbolMap<marketData.StockTrade>(req.symbols, (symbols, pageToken) =>
+            this.stocks.stockTrades({ ...req, symbols, pageToken }).then((r) => ({ data: r.trades ?? {}, nextPageToken: r.nextPageToken })),
+            opts,
         );
     }
 
@@ -657,9 +843,10 @@ export class MarketDataClient {
         );
     }
     /** Collect historical stock quotes merged into a `{ [symbol]: StockQuote[] }` map. */
-    collectStockQuotesBySymbol(req: Omit<WithSymbolList<marketData.StockQuotesRequest>, "pageToken">) {
-        return pagination.collectBySymbol<marketData.StockQuote>((pageToken) =>
-            this.stocks.stockQuotes({ ...req, symbols: values.normalizeSymbols(req.symbols), pageToken }).then((r) => ({ data: r.quotes ?? {}, nextPageToken: r.nextPageToken })),
+    collectStockQuotesBySymbol(req: Omit<WithSymbolList<marketData.StockQuotesRequest>, "pageToken">, opts?: SymbolCollectOptions) {
+        return collectSymbolMap<marketData.StockQuote>(req.symbols, (symbols, pageToken) =>
+            this.stocks.stockQuotes({ ...req, symbols, pageToken }).then((r) => ({ data: r.quotes ?? {}, nextPageToken: r.nextPageToken })),
+            opts,
         );
     }
 
@@ -670,9 +857,10 @@ export class MarketDataClient {
         );
     }
     /** Collect historical stock auctions merged into a `{ [symbol]: StockDailyAuctions[] }` map. */
-    collectStockAuctionsBySymbol(req: Omit<WithSymbolList<marketData.StockAuctionsRequest>, "pageToken">) {
-        return pagination.collectBySymbol<marketData.StockDailyAuctions>((pageToken) =>
-            this.stocks.stockAuctions({ ...req, symbols: values.normalizeSymbols(req.symbols), pageToken }).then((r) => ({ data: r.auctions ?? {}, nextPageToken: r.nextPageToken })),
+    collectStockAuctionsBySymbol(req: Omit<WithSymbolList<marketData.StockAuctionsRequest>, "pageToken">, opts?: SymbolCollectOptions) {
+        return collectSymbolMap<marketData.StockDailyAuctions>(req.symbols, (symbols, pageToken) =>
+            this.stocks.stockAuctions({ ...req, symbols, pageToken }).then((r) => ({ data: r.auctions ?? {}, nextPageToken: r.nextPageToken })),
+            opts,
         );
     }
 
@@ -683,9 +871,10 @@ export class MarketDataClient {
         );
     }
     /** Collect historical crypto bars merged into a `{ [symbol]: CryptoBar[] }` map. */
-    collectCryptoBarsBySymbol(req: Omit<WithTimeframe<WithSymbolList<marketData.CryptoBarsRequest>>, "pageToken">) {
-        return pagination.collectBySymbol<marketData.CryptoBar>((pageToken) =>
-            this.crypto.cryptoBars({ ...req, symbols: values.normalizeSymbols(req.symbols), pageToken }).then((r) => ({ data: r.bars ?? {}, nextPageToken: r.nextPageToken })),
+    collectCryptoBarsBySymbol(req: Omit<WithTimeframe<WithSymbolList<marketData.CryptoBarsRequest>>, "pageToken">, opts?: SymbolCollectOptions) {
+        return collectSymbolMap<marketData.CryptoBar>(req.symbols, (symbols, pageToken) =>
+            this.crypto.cryptoBars({ ...req, symbols, pageToken }).then((r) => ({ data: r.bars ?? {}, nextPageToken: r.nextPageToken })),
+            opts,
         );
     }
 
@@ -696,9 +885,10 @@ export class MarketDataClient {
         );
     }
     /** Collect historical crypto trades merged into a `{ [symbol]: CryptoTrade[] }` map. */
-    collectCryptoTradesBySymbol(req: Omit<WithSymbolList<marketData.CryptoTradesRequest>, "pageToken">) {
-        return pagination.collectBySymbol<marketData.CryptoTrade>((pageToken) =>
-            this.crypto.cryptoTrades({ ...req, symbols: values.normalizeSymbols(req.symbols), pageToken }).then((r) => ({ data: r.trades ?? {}, nextPageToken: r.nextPageToken })),
+    collectCryptoTradesBySymbol(req: Omit<WithSymbolList<marketData.CryptoTradesRequest>, "pageToken">, opts?: SymbolCollectOptions) {
+        return collectSymbolMap<marketData.CryptoTrade>(req.symbols, (symbols, pageToken) =>
+            this.crypto.cryptoTrades({ ...req, symbols, pageToken }).then((r) => ({ data: r.trades ?? {}, nextPageToken: r.nextPageToken })),
+            opts,
         );
     }
 
@@ -709,9 +899,10 @@ export class MarketDataClient {
         );
     }
     /** Collect historical crypto quotes merged into a `{ [symbol]: CryptoQuote[] }` map. */
-    collectCryptoQuotesBySymbol(req: Omit<WithSymbolList<marketData.CryptoQuotesRequest>, "pageToken">) {
-        return pagination.collectBySymbol<marketData.CryptoQuote>((pageToken) =>
-            this.crypto.cryptoQuotes({ ...req, symbols: values.normalizeSymbols(req.symbols), pageToken }).then((r) => ({ data: r.quotes ?? {}, nextPageToken: r.nextPageToken })),
+    collectCryptoQuotesBySymbol(req: Omit<WithSymbolList<marketData.CryptoQuotesRequest>, "pageToken">, opts?: SymbolCollectOptions) {
+        return collectSymbolMap<marketData.CryptoQuote>(req.symbols, (symbols, pageToken) =>
+            this.crypto.cryptoQuotes({ ...req, symbols, pageToken }).then((r) => ({ data: r.quotes ?? {}, nextPageToken: r.nextPageToken })),
+            opts,
         );
     }
 
@@ -722,9 +913,10 @@ export class MarketDataClient {
         );
     }
     /** Collect historical option bars merged into a `{ [symbol]: OptionBar[] }` map. */
-    collectOptionBarsBySymbol(req: Omit<WithTimeframe<WithSymbolList<marketData.OptionBarsRequest>>, "pageToken">) {
-        return pagination.collectBySymbol<marketData.OptionBar>((pageToken) =>
-            this.options.optionBars({ ...req, symbols: values.normalizeSymbols(req.symbols), pageToken }).then((r) => ({ data: r.bars ?? {}, nextPageToken: r.nextPageToken })),
+    collectOptionBarsBySymbol(req: Omit<WithTimeframe<WithSymbolList<marketData.OptionBarsRequest>>, "pageToken">, opts?: SymbolCollectOptions) {
+        return collectSymbolMap<marketData.OptionBar>(req.symbols, (symbols, pageToken) =>
+            this.options.optionBars({ ...req, symbols, pageToken }).then((r) => ({ data: r.bars ?? {}, nextPageToken: r.nextPageToken })),
+            opts,
         );
     }
 
@@ -735,9 +927,10 @@ export class MarketDataClient {
         );
     }
     /** Collect historical option trades merged into a `{ [symbol]: OptionTrade[] }` map. */
-    collectOptionTradesBySymbol(req: Omit<WithSymbolList<marketData.OptionTradesRequest>, "pageToken">) {
-        return pagination.collectBySymbol<marketData.OptionTrade>((pageToken) =>
-            this.options.optionTrades({ ...req, symbols: values.normalizeSymbols(req.symbols), pageToken }).then((r) => ({ data: r.trades ?? {}, nextPageToken: r.nextPageToken })),
+    collectOptionTradesBySymbol(req: Omit<WithSymbolList<marketData.OptionTradesRequest>, "pageToken">, opts?: SymbolCollectOptions) {
+        return collectSymbolMap<marketData.OptionTrade>(req.symbols, (symbols, pageToken) =>
+            this.options.optionTrades({ ...req, symbols, pageToken }).then((r) => ({ data: r.trades ?? {}, nextPageToken: r.nextPageToken })),
+            opts,
         );
     }
 
@@ -748,9 +941,10 @@ export class MarketDataClient {
         );
     }
     /** Collect historical index values merged into a `{ [symbol]: IndexValue[] }` map. */
-    collectIndexValuesBySymbol(req: Omit<WithSymbolList<marketData.IndexValuesRequest>, "pageToken">) {
-        return pagination.collectBySymbol<marketData.IndexValue>((pageToken) =>
-            this.indices.indexValues({ ...req, symbols: values.normalizeSymbols(req.symbols), pageToken }).then((r) => ({ data: r.values ?? {}, nextPageToken: r.nextPageToken })),
+    collectIndexValuesBySymbol(req: Omit<WithSymbolList<marketData.IndexValuesRequest>, "pageToken">, opts?: SymbolCollectOptions) {
+        return collectSymbolMap<marketData.IndexValue>(req.symbols, (symbols, pageToken) =>
+            this.indices.indexValues({ ...req, symbols, pageToken }).then((r) => ({ data: r.values ?? {}, nextPageToken: r.nextPageToken })),
+            opts,
         );
     }
 
@@ -761,9 +955,10 @@ export class MarketDataClient {
         );
     }
     /** Collect historical forex rates merged into a `{ [pair]: ForexRate[] }` map. */
-    collectForexRatesBySymbol(req: Omit<WithCurrencyPairList<marketData.RatesRequest>, "pageToken">) {
-        return pagination.collectBySymbol<marketData.ForexRate>((pageToken) =>
-            this.forex.rates({ ...req, currencyPairs: values.normalizeSymbols(req.currencyPairs), pageToken }).then((r) => ({ data: r.rates ?? {}, nextPageToken: r.nextPageToken })),
+    collectForexRatesBySymbol(req: Omit<WithCurrencyPairList<marketData.RatesRequest>, "pageToken">, opts?: SymbolCollectOptions) {
+        return collectSymbolMap<marketData.ForexRate>(req.currencyPairs, (currencyPairs, pageToken) =>
+            this.forex.rates({ ...req, currencyPairs, pageToken }).then((r) => ({ data: r.rates ?? {}, nextPageToken: r.nextPageToken })),
+            opts,
         );
     }
 
@@ -868,7 +1063,7 @@ export class MarketDataClient {
     async *iterateCorporateActionsPages(
         req: Omit<WithOptionalSymbolList<marketData.CorporateActionsRequest>, "pageToken">,
     ): AsyncGenerator<marketData.CorporateActions, void, void> {
-        let pageToken: string | undefined = undefined;
+        let pageToken: string | undefined ;
         const symbols = req.symbols === undefined ? undefined : values.normalizeSymbols(req.symbols);
         do {
             const r = await this.corporateActions.corporateActions({ ...req, symbols, pageToken });
@@ -902,6 +1097,15 @@ export class MarketDataClient {
  * Single entry point for the Alpaca SDK. Construct once with credentials and
  * access every trading and market-data API (and streaming client) through the
  * grouped {@link Alpaca.trading} and {@link Alpaca.data} namespaces.
+ *
+ * The facade is two layers, and the rule is simple: every generated REST method
+ * is always reachable raw at `alpaca.<group>.<resource>.<method>()` (layer 1),
+ * and a curated set of ergonomic helpers is layered additively on top (layer 2)
+ * without ever hiding the raw methods. If no ergonomic helper exists for what
+ * you need, the generated method is still there. The three discoverability maps
+ * make this queryable: `capabilities` (generated, via `findCapabilities`),
+ * `ergonomicCapabilities` (helpers, via `findErgonomic`), and
+ * `streamingCapabilities` (real-time factories).
  */
 export class Alpaca {
     private _trading?: TradingClient;

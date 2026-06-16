@@ -4,7 +4,13 @@ import { Alpaca, TradingClient, MarketDataClient, LIVE_TRADING_BASE_PATH, DEFAUL
 import * as trading from '../src/trading';
 import * as marketData from '../src/market-data';
 import * as streaming from '../src/streaming';
-import { capabilities, streamingCapabilities, findCapabilities } from '../src/capabilities';
+import {
+    capabilities,
+    streamingCapabilities,
+    findCapabilities,
+    ergonomicCapabilities,
+    findErgonomic,
+} from '../src/capabilities';
 import { TimeFrame } from '../src/values';
 
 const CREDS = { keyId: 'AKTEST', secret: 'sekret' };
@@ -212,6 +218,64 @@ describe('Pagination iterators', () => {
         expect(new URL(calls[0].url).searchParams.get('currency_pairs')).toBe('EUR/USD,GBP/USD');
     });
 
+    it('caps each symbol at maxPerSymbol and stops paginating early', async () => {
+        const { fetchApi, tokens } = pagedFetch({
+            '': { bars: { AAPL: [{ c: 1 }, { c: 2 }], MSFT: [{ c: 10 }, { c: 11 }] }, next_page_token: 'p2' },
+            p2: { bars: { AAPL: [{ c: 3 }] }, next_page_token: null },
+        });
+        const { marketData: md } = new Alpaca({ ...CREDS, fetchApi });
+        const bySymbol = await md.collectStockBarsBySymbol(
+            { symbols: 'AAPL,MSFT', timeframe: TimeFrame.Day },
+            { maxPerSymbol: 2 },
+        );
+        expect(bySymbol.AAPL).toHaveLength(2);
+        expect(bySymbol.MSFT).toHaveLength(2);
+        // Both symbols filled on the first page, so 'p2' is never fetched.
+        expect(tokens).toEqual([null]);
+    });
+
+    it('splits symbols into concurrent per-symbol requests when concurrency > 1', async () => {
+        const seen: string[] = [];
+        const fetchApi = (async (url: string | URL | Request): Promise<Response> => {
+            const symbols = new URL(String(url)).searchParams.get('symbols') ?? '';
+            seen.push(symbols);
+            const bars: Record<string, unknown[]> = {};
+            for (const s of symbols.split(',')) bars[s] = [{ c: 1 }];
+            return new Response(JSON.stringify({ bars, next_page_token: null }), {
+                status: 200,
+                headers: { 'Content-Type': 'application/json' },
+            });
+        }) as unknown as trading.FetchAPI;
+        const { marketData: md } = new Alpaca({ ...CREDS, fetchApi });
+        const bySymbol = await md.collectStockBarsBySymbol(
+            { symbols: ['AAPL', 'MSFT', 'TSLA'], timeframe: TimeFrame.Day },
+            { concurrency: 2 },
+        );
+        expect(Object.keys(bySymbol).sort()).toEqual(['AAPL', 'MSFT', 'TSLA']);
+        // chunkSize defaults to 1, so each symbol is fetched on its own request.
+        expect(seen.sort()).toEqual(['AAPL', 'MSFT', 'TSLA']);
+    });
+
+    it('groups symbols by chunkSize under concurrency', async () => {
+        const seen: string[] = [];
+        const fetchApi = (async (url: string | URL | Request): Promise<Response> => {
+            const symbols = new URL(String(url)).searchParams.get('symbols') ?? '';
+            seen.push(symbols);
+            const bars: Record<string, unknown[]> = {};
+            for (const s of symbols.split(',')) bars[s] = [{ c: 1 }];
+            return new Response(JSON.stringify({ bars, next_page_token: null }), {
+                status: 200,
+                headers: { 'Content-Type': 'application/json' },
+            });
+        }) as unknown as trading.FetchAPI;
+        const { marketData: md } = new Alpaca({ ...CREDS, fetchApi });
+        await md.collectStockBarsBySymbol(
+            { symbols: ['A', 'B', 'C'], timeframe: TimeFrame.Day },
+            { concurrency: 2, chunkSize: 2 },
+        );
+        expect(seen.sort()).toEqual(['A,B', 'C']);
+    });
+
     it('collects a top-level array endpoint (news) across pages', async () => {
         const { fetchApi } = pagedFetch({
             '': { news: [{ id: 1 }, { id: 2 }], next_page_token: 'n2' },
@@ -333,5 +397,42 @@ describe('Capability map', () => {
                 expect(typeof apiInstance[method], `${entry.accessor}.${method}`).toBe('function');
             }
         }
+    });
+
+    it('every ergonomic entry is well-formed', () => {
+        const kinds = new Set(['orderBuilder', 'workflow', 'normalized', 'pagination']);
+        for (const entry of ergonomicCapabilities) {
+            expect(entry.accessor).toMatch(/^(trading|marketData)(\.[a-zA-Z]+)?$/);
+            expect(entry.group === 'trading' || entry.group === 'marketData', entry.accessor).toBe(true);
+            expect(kinds.has(entry.kind), entry.kind).toBe(true);
+            expect(entry.summary).toBeTruthy();
+            expect(entry.methods.length).toBeGreaterThan(0);
+        }
+    });
+
+    it('every ergonomic helper actually exists on the facade', () => {
+        const alpaca = new Alpaca({ ...CREDS });
+        for (const entry of ergonomicCapabilities) {
+            // Walk the dotted accessor (e.g. "trading.orders" or "marketData") from the client.
+            let target = alpaca as unknown as Record<string, unknown>;
+            for (const segment of entry.accessor.split('.')) {
+                target = target[segment] as Record<string, unknown>;
+                expect(target, entry.accessor).toBeTruthy();
+            }
+            for (const method of entry.methods) {
+                expect(typeof target[method], `${entry.accessor}.${method}`).toBe('function');
+            }
+        }
+    });
+
+    it('locates an ergonomic helper by name', () => {
+        const market = findErgonomic('market');
+        expect(market).toHaveLength(1);
+        expect(market[0].accessor).toBe('trading.orders');
+        expect(market[0].kind).toBe('orderBuilder');
+
+        const stockBars = findErgonomic('getStockBars');
+        expect(stockBars[0].accessor).toBe('marketData');
+        expect(stockBars[0].kind).toBe('normalized');
     });
 });
