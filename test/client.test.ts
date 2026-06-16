@@ -1,0 +1,337 @@
+import { describe, it, expect, vi, afterEach } from 'vitest';
+
+import { Alpaca, TradingClient, MarketDataClient, LIVE_TRADING_BASE_PATH, DEFAULT_RATE_LIMIT } from '../src/client';
+import * as trading from '../src/trading';
+import * as marketData from '../src/market-data';
+import * as streaming from '../src/streaming';
+import { capabilities, streamingCapabilities, findCapabilities } from '../src/capabilities';
+import { TimeFrame } from '../src/values';
+
+const CREDS = { keyId: 'AKTEST', secret: 'sekret' };
+
+/** Captures the URL + headers of the single request a fetchApi receives. */
+function capturingFetch() {
+    const calls: Array<{ url: string; init?: RequestInit }> = [];
+    const fetchApi = async (url: string | URL | Request, init?: RequestInit): Promise<Response> => {
+        calls.push({ url: String(url), init });
+        return new Response(JSON.stringify({}), {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+        });
+    };
+    return { calls, fetchApi: fetchApi as unknown as trading.FetchAPI };
+}
+
+function headerValue(init: RequestInit | undefined, name: string): string | undefined {
+    const h = init?.headers;
+    if (!h) return undefined;
+    if (typeof Headers !== 'undefined' && h instanceof Headers) return h.get(name) ?? undefined;
+    if (Array.isArray(h)) {
+        const found = (h as [string, string][]).find(([k]) => k.toLowerCase() === name.toLowerCase());
+        return found?.[1];
+    }
+    const key = Object.keys(h).find((k) => k.toLowerCase() === name.toLowerCase());
+    return key ? (h as Record<string, string>)[key] : undefined;
+}
+
+describe('Alpaca client construction', () => {
+    it('throws when credentials are missing', () => {
+        expect(() => new Alpaca({} as never)).toThrow(/keyId.*secret/i);
+        expect(() => new Alpaca({ keyId: 'x' } as never)).toThrow(/keyId.*secret/i);
+        expect(() => new Alpaca({ secret: 'y' } as never)).toThrow(/keyId.*secret/i);
+    });
+
+    it('defaults to the paper environment', () => {
+        expect(new Alpaca({ ...CREDS }).paper).toBe(true);
+        expect(new Alpaca({ ...CREDS, paper: false }).paper).toBe(false);
+    });
+
+    it('exposes grouped trading and marketData sub-clients', () => {
+        const alpaca = new Alpaca({ ...CREDS });
+        expect(alpaca.trading).toBeInstanceOf(TradingClient);
+        expect(alpaca.marketData).toBeInstanceOf(MarketDataClient);
+        // Sub-clients are memoized.
+        expect(alpaca.trading).toBe(alpaca.trading);
+        expect(alpaca.marketData).toBe(alpaca.marketData);
+    });
+
+    it('exposes `data` as an alias of `marketData`', () => {
+        const alpaca = new Alpaca({ ...CREDS });
+        expect(alpaca.data).toBe(alpaca.marketData);
+    });
+});
+
+describe('Trading sub-client', () => {
+    it('exposes every trading API as the right instance', () => {
+        const { trading: t } = new Alpaca({ ...CREDS });
+        expect(t.account).toBeInstanceOf(trading.AccountsApi);
+        expect(t.accountActivities).toBeInstanceOf(trading.AccountActivitiesApi);
+        expect(t.accountConfigurations).toBeInstanceOf(trading.AccountConfigurationsApi);
+        expect(t.assets).toBeInstanceOf(trading.AssetsApi);
+        expect(t.calendar).toBeInstanceOf(trading.CalendarApi);
+        expect(t.corporateActions).toBeInstanceOf(trading.CorporateActionsApi);
+        expect(t.cryptoFunding).toBeInstanceOf(trading.CryptoFundingApi);
+        expect(t.cryptoPerpetualsAccountVitals).toBeInstanceOf(trading.CryptoPerpetualsAccountVitalsBetaApi);
+        expect(t.cryptoPerpetualsFunding).toBeInstanceOf(trading.CryptoPerpetualsFundingBetaApi);
+        expect(t.cryptoPerpetualsLeverage).toBeInstanceOf(trading.CryptoPerpetualsLeverageBetaApi);
+        expect(t.events).toBeInstanceOf(trading.EventsApi);
+        expect(t.orders).toBeInstanceOf(trading.OrdersApi);
+        expect(t.portfolioHistory).toBeInstanceOf(trading.PortfolioHistoryApi);
+        expect(t.positions).toBeInstanceOf(trading.PositionsApi);
+        expect(t.tokenization).toBeInstanceOf(trading.TokenizationApi);
+        expect(t.watchlists).toBeInstanceOf(trading.WatchlistsApi);
+    });
+
+    it('memoizes each API instance', () => {
+        const { trading: t } = new Alpaca({ ...CREDS });
+        expect(t.orders).toBe(t.orders);
+        expect(t.positions).toBe(t.positions);
+    });
+
+    it('uses the paper host by default and sends auth headers', async () => {
+        const { calls, fetchApi } = capturingFetch();
+        const alpaca = new Alpaca({ ...CREDS, fetchApi });
+        await alpaca.trading.account.getAccount();
+        expect(calls).toHaveLength(1);
+        expect(calls[0].url).toContain('https://paper-api.alpaca.markets');
+        expect(headerValue(calls[0].init, 'APCA-API-KEY-ID')).toBe(CREDS.keyId);
+        expect(headerValue(calls[0].init, 'APCA-API-SECRET-KEY')).toBe(CREDS.secret);
+    });
+
+    it('uses the live host when paper is false', async () => {
+        const { calls, fetchApi } = capturingFetch();
+        const alpaca = new Alpaca({ ...CREDS, paper: false, fetchApi });
+        await alpaca.trading.account.getAccount();
+        expect(calls[0].url).toContain(LIVE_TRADING_BASE_PATH);
+        expect(calls[0].url).not.toContain('paper-api');
+    });
+});
+
+describe('Market-data sub-client', () => {
+    it('exposes every market-data API as the right instance', () => {
+        const { marketData: md } = new Alpaca({ ...CREDS });
+        expect(md.stocks).toBeInstanceOf(marketData.StockApi);
+        expect(md.crypto).toBeInstanceOf(marketData.CryptoApi);
+        expect(md.cryptoPerpetualFutures).toBeInstanceOf(marketData.CryptoPerpetualFuturesApi);
+        expect(md.fixedIncome).toBeInstanceOf(marketData.FixedIncomeApi);
+        expect(md.forex).toBeInstanceOf(marketData.ForexApi);
+        expect(md.indices).toBeInstanceOf(marketData.IndexApi);
+        expect(md.logos).toBeInstanceOf(marketData.LogosApi);
+        expect(md.news).toBeInstanceOf(marketData.NewsApi);
+        expect(md.options).toBeInstanceOf(marketData.OptionApi);
+        expect(md.screener).toBeInstanceOf(marketData.ScreenerApi);
+        expect(md.corporateActions).toBeInstanceOf(marketData.CorporateActionsApi);
+    });
+
+    it('memoizes each API instance', () => {
+        const { marketData: md } = new Alpaca({ ...CREDS });
+        expect(md.stocks).toBe(md.stocks);
+    });
+
+    it('uses the data host regardless of the paper flag', async () => {
+        for (const paper of [true, false]) {
+            const { calls, fetchApi } = capturingFetch();
+            const alpaca = new Alpaca({ ...CREDS, paper, fetchApi });
+            await alpaca.marketData.stocks.stockMetaExchanges();
+            expect(calls[0].url).toContain('https://data.alpaca.markets');
+            expect(headerValue(calls[0].init, 'APCA-API-KEY-ID')).toBe(CREDS.keyId);
+        }
+    });
+});
+
+describe('Streaming factories', () => {
+    const wsFactory = () => ({
+        on: () => undefined,
+        send: () => undefined,
+        close: () => undefined,
+    });
+
+    it('builds a trading stream that inherits the paper flag', () => {
+        const paperStream = new Alpaca({ ...CREDS }).trading.stream({ wsFactory });
+        expect(paperStream).toBeInstanceOf(streaming.TradingStream);
+
+        const liveStream = new Alpaca({ ...CREDS, paper: false }).trading.stream({ wsFactory });
+        expect(liveStream).toBeInstanceOf(streaming.TradingStream);
+    });
+
+    it('builds each market-data stream type', () => {
+        const { marketData: md } = new Alpaca({ ...CREDS });
+        expect(md.stockStream({ wsFactory })).toBeInstanceOf(streaming.StockDataStream);
+        expect(md.cryptoStream({ wsFactory })).toBeInstanceOf(streaming.CryptoDataStream);
+        expect(md.optionStream({ wsFactory })).toBeInstanceOf(streaming.OptionDataStream);
+        expect(md.newsStream({ wsFactory })).toBeInstanceOf(streaming.NewsStream);
+    });
+});
+
+/** A fetchApi that serves a JSON body per `page_token` query value and records tokens seen. */
+function pagedFetch(pagesByToken: Record<string, unknown>) {
+    const tokens: Array<string | null> = [];
+    const fetchApi = async (url: string | URL | Request): Promise<Response> => {
+        const token = new URL(String(url)).searchParams.get('page_token');
+        tokens.push(token);
+        const body = pagesByToken[token ?? ''];
+        return new Response(JSON.stringify(body), {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+        });
+    };
+    return { tokens, fetchApi: fetchApi as unknown as trading.FetchAPI };
+}
+
+describe('Pagination iterators', () => {
+    it('iterates and merges multi-symbol stock bars across pages', async () => {
+        const { fetchApi, tokens } = pagedFetch({
+            '': { bars: { AAPL: [{ c: 1 }, { c: 2 }], MSFT: [{ c: 10 }] }, next_page_token: 'p2' },
+            p2: { bars: { AAPL: [{ c: 3 }] }, next_page_token: null },
+        });
+        const { marketData: md } = new Alpaca({ ...CREDS, fetchApi });
+        const req = { symbols: 'AAPL,MSFT', timeframe: TimeFrame.Day };
+
+        const flat: Array<{ symbol: string }> = [];
+        for await (const rec of md.iterateStockBars(req)) flat.push(rec);
+        expect(flat).toHaveLength(4);
+
+        const bySymbol = await md.collectStockBarsBySymbol(req);
+        expect(bySymbol.AAPL).toHaveLength(3);
+        expect(bySymbol.MSFT).toHaveLength(1);
+        // page_token threaded: undefined first, then 'p2' (x2: once per iterate/collect pass).
+        expect(tokens).toContain('p2');
+    });
+
+    it('accepts a `symbols` array and joins it for the wire', async () => {
+        const { calls, fetchApi } = capturingFetch();
+        const { marketData: md } = new Alpaca({ ...CREDS, fetchApi });
+        await md.collectStockBarsBySymbol({ symbols: ['AAPL', 'MSFT'], timeframe: TimeFrame.Day });
+        expect(new URL(calls[0].url).searchParams.get('symbols')).toBe('AAPL,MSFT');
+    });
+
+    it('accepts a forex `currencyPairs` array and joins it for the wire', async () => {
+        const { calls, fetchApi } = capturingFetch();
+        const { marketData: md } = new Alpaca({ ...CREDS, fetchApi });
+        await md.collectForexRatesBySymbol({ currencyPairs: ['EUR/USD', 'GBP/USD'], timeframe: TimeFrame.Day });
+        expect(new URL(calls[0].url).searchParams.get('currency_pairs')).toBe('EUR/USD,GBP/USD');
+    });
+
+    it('collects a top-level array endpoint (news) across pages', async () => {
+        const { fetchApi } = pagedFetch({
+            '': { news: [{ id: 1 }, { id: 2 }], next_page_token: 'n2' },
+            n2: { news: [{ id: 3 }], next_page_token: null },
+        });
+        const { marketData: md } = new Alpaca({ ...CREDS, fetchApi });
+        const all = await md.collectNews();
+        expect(all).toHaveLength(3);
+    });
+
+    it('collects a symbol-object endpoint (option snapshots), later pages overwriting', async () => {
+        const { fetchApi } = pagedFetch({
+            '': { snapshots: { 'AAPL240119C': { latestTrade: { p: 1 } } }, next_page_token: 's2' },
+            s2: { snapshots: { 'MSFT240119C': { latestTrade: { p: 2 } } }, next_page_token: null },
+        });
+        const { marketData: md } = new Alpaca({ ...CREDS, fetchApi });
+        const merged = await md.collectOptionSnapshotsBySymbol({ symbols: 'AAPL240119C,MSFT240119C' });
+        expect(Object.keys(merged).sort()).toEqual(['AAPL240119C', 'MSFT240119C']);
+    });
+
+    it('merges corporate-action sub-arrays across pages', async () => {
+        const { fetchApi } = pagedFetch({
+            '': { corporate_actions: { cash_dividends: [{ symbol: 'AAPL' }, { symbol: 'MSFT' }] }, next_page_token: 'c2' },
+            c2: { corporate_actions: { cash_dividends: [{ symbol: 'TSLA' }] }, next_page_token: null },
+        });
+        const { marketData: md } = new Alpaca({ ...CREDS, fetchApi });
+        const merged = await md.collectCorporateActions({ symbols: 'AAPL,MSFT,TSLA' });
+        expect(merged.cashDividends).toHaveLength(3);
+    });
+
+    it('follows cursor pagination for account activities using the last id', async () => {
+        const { fetchApi, tokens } = pagedFetch({
+            '': [{ id: 'a' }, { id: 'b' }],
+            b: [{ id: 'c' }],
+            c: [],
+        });
+        const { trading: t } = new Alpaca({ ...CREDS, fetchApi });
+        const all = await t.collectActivities();
+        expect(all.map((a) => a.id)).toEqual(['a', 'b', 'c']);
+        expect(tokens).toEqual([null, 'b', 'c']);
+    });
+});
+
+describe('Facade rate limiting', () => {
+    afterEach(() => {
+        vi.useRealTimers();
+    });
+
+    it('exposes a sane default budget', () => {
+        expect(DEFAULT_RATE_LIMIT.maxRequests).toBe(200);
+        expect(DEFAULT_RATE_LIMIT.intervalMs).toBe(60_000);
+    });
+
+    it('throttles requests once the configured budget is exhausted', async () => {
+        vi.useFakeTimers();
+        vi.setSystemTime(0);
+        let completed = 0;
+        const fetchApi = (async () =>
+            new Response('{}', { status: 200, headers: { 'Content-Type': 'application/json' } })) as unknown as trading.FetchAPI;
+        const alpaca = new Alpaca({ ...CREDS, fetchApi, rateLimit: { maxRequests: 1, intervalMs: 10_000 } });
+
+        const a = alpaca.trading.account.getAccount().then(() => completed++);
+        const b = alpaca.trading.account.getAccount().then(() => completed++);
+
+        await a; // first call has a token
+        await Promise.resolve();
+        expect(completed).toBe(1); // second is queued, no token left
+
+        await vi.advanceTimersByTimeAsync(10_000); // refill one token
+        await b;
+        expect(completed).toBe(2);
+    });
+
+    it('does not throttle when rateLimit is false', async () => {
+        const calls: number[] = [];
+        const fetchApi = (async () => {
+            calls.push(1);
+            return new Response('{}', { status: 200, headers: { 'Content-Type': 'application/json' } });
+        }) as unknown as trading.FetchAPI;
+        const alpaca = new Alpaca({ ...CREDS, fetchApi, rateLimit: false });
+        await Promise.all(Array.from({ length: 10 }, () => alpaca.trading.account.getAccount()));
+        expect(calls).toHaveLength(10);
+    });
+});
+
+describe('Capability map', () => {
+    it('every entry is well-formed', () => {
+        for (const entry of capabilities) {
+            expect(entry.accessor).toMatch(/^(trading|marketData)\.[a-zA-Z]+$/);
+            expect(entry.api).toBeTruthy();
+            expect(entry.methods.length).toBeGreaterThan(0);
+        }
+    });
+
+    it('locates a method on its accessor / Api class', () => {
+        const account = findCapabilities('getAccount');
+        expect(account).toHaveLength(1);
+        expect(account[0].accessor).toBe('trading.account');
+        expect(account[0].api).toBe('AccountsApi');
+
+        const bars = findCapabilities('stockBars');
+        expect(bars[0].accessor).toBe('marketData.stocks');
+        expect(bars[0].api).toBe('StockApi');
+    });
+
+    it('lists the streaming factories', () => {
+        const tradeStream = streamingCapabilities.find((s) => s.accessor === 'trading.stream');
+        expect(tradeStream?.stream).toBe('TradingStream');
+    });
+
+    it('every listed method actually exists on its Api instance', () => {
+        const alpaca = new Alpaca({ ...CREDS });
+        for (const entry of capabilities) {
+            const [group, prop] = entry.accessor.split('.');
+            const client = (alpaca as unknown as Record<string, Record<string, unknown>>)[group];
+            const apiInstance = client[prop] as unknown as Record<string, unknown>;
+            expect(apiInstance, entry.accessor).toBeTruthy();
+            for (const method of entry.methods) {
+                expect(typeof apiInstance[method], `${entry.accessor}.${method}`).toBe('function');
+            }
+        }
+    });
+});
