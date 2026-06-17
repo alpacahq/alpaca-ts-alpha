@@ -18,6 +18,20 @@ and real-time streaming.
 npm install @alpacahq/alpaca-ts-alpha
 ```
 
+## Install the agent skill
+
+Building on this SDK with an AI coding agent? This repo ships an
+[Agent Skill](https://agentskills.io) that teaches agents the SDK's mental
+model, idioms, and where to look. Install it with the open `skills` CLI — it
+auto-detects your agent (Claude Code, Cursor, Codex, …) and installs there:
+
+```bash
+npx skills add alpacahq/alpaca-ts-alpha
+```
+
+The skill lives at
+[`skills/alpaca-ts-alpha-sdk/SKILL.md`](./skills/alpaca-ts-alpha-sdk/SKILL.md).
+
 
 ## Quick start: the `Alpaca` client
 
