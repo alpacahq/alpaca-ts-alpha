@@ -18,7 +18,6 @@ and real-time streaming.
 npm install @alpacahq/alpaca-ts-alpha
 ```
 
-_(Not yet published — `version` is `0.0.0`.)_
 
 ## Quick start: the `Alpaca` client
 
