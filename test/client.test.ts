@@ -399,6 +399,61 @@ describe('Pagination iterators', () => {
     });
 });
 
+describe('Single-symbol normalized accessors (*For)', () => {
+    it('getStockBarsFor unwraps to a canonical Bar[] with the symbol stamped', async () => {
+        const { fetchApi } = pagedFetch({
+            '': { bars: { AAPL: [{ t: '2024-01-02T00:00:00Z', o: 1, h: 2, l: 0.5, c: 1.5, v: 100, n: 3, vw: 1.2 }] }, next_page_token: null },
+        });
+        const { marketData: md } = new Alpaca({ ...CREDS, fetchApi });
+
+        const bars = await md.getStockBarsFor('AAPL', { timeframe: TimeFrame.Day });
+        expect(Array.isArray(bars)).toBe(true);
+        expect(bars).toHaveLength(1);
+        expect(bars[0].symbol).toBe('AAPL');
+        expect(bars[0].close).toBe(1.5);
+        // Canonical shapes always hand back a real Date, even though the raw
+        // map response carries the timestamp as an ISO string at runtime.
+        expect(bars[0].timestamp).toBeInstanceOf(Date);
+    });
+
+    it('getStockCandlesFor returns a single Candles object (not a symbol map)', async () => {
+        const { fetchApi } = pagedFetch({
+            '': { bars: { AAPL: [{ t: '2024-01-02T00:00:00Z', o: 1, h: 2, l: 0.5, c: 1.5, v: 100, n: 3, vw: 1.2 }] }, next_page_token: null },
+        });
+        const { marketData: md } = new Alpaca({ ...CREDS, fetchApi });
+
+        const candles = await md.getStockCandlesFor('AAPL', { timeframe: TimeFrame.Day });
+        expect(candles.symbol).toBe('AAPL');
+        expect(candles.close).toEqual([1.5]);
+        expect(candles.time).toHaveLength(1);
+        expect(typeof candles.time[0]).toBe('number');
+    });
+
+    it('returns an empty series / empty Candles when the symbol has no data', async () => {
+        const { fetchApi } = pagedFetch({
+            '': { bars: {}, next_page_token: null },
+        });
+        const { marketData: md } = new Alpaca({ ...CREDS, fetchApi });
+
+        expect(await md.getStockBarsFor('AAPL', { timeframe: TimeFrame.Day })).toEqual([]);
+        const candles = await md.getStockCandlesFor('AAPL', { timeframe: TimeFrame.Day });
+        expect(candles.close).toEqual([]);
+        expect(candles.time).toEqual([]);
+    });
+
+    it('getCryptoTradesFor unwraps a single pair to canonical Trade[]', async () => {
+        const { fetchApi } = pagedFetch({
+            '': { trades: { 'BTC/USD': [{ t: '2024-01-02T00:00:00Z', p: 42000, s: 0.1, i: 7 }] }, next_page_token: null },
+        });
+        const { marketData: md } = new Alpaca({ ...CREDS, fetchApi });
+
+        const trades = await md.getCryptoTradesFor('BTC/USD', { loc: 'us' });
+        expect(trades).toHaveLength(1);
+        expect(trades[0].symbol).toBe('BTC/USD');
+        expect(trades[0].price).toBe(42000);
+    });
+});
+
 describe('Facade rate limiting', () => {
     afterEach(() => {
         vi.useRealTimers();

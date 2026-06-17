@@ -609,6 +609,42 @@ const ergonomic: ApiReferenceExamples = {
         description: "Historical crypto bars as chart-ready columnar `Candles`, keyed by symbol.",
         example: 'const candles = await alpaca.marketData.getCryptoCandles({ loc: "us", symbols: ["BTC/USD"], timeframe: "1Day", start: new Date("2024-01-01") });',
     },
+    "marketData.getStockBarsFor": {
+        description: "Single-symbol historical stock bars as canonical `Bar[]` (unwrapped, not a symbol map).",
+        example: 'const bars = await alpaca.marketData.getStockBarsFor("AAPL", { timeframe: "1Day", start: new Date("2024-01-01") });',
+    },
+    "marketData.getCryptoBarsFor": {
+        description: "Single-symbol historical crypto bars as canonical `Bar[]` (unwrapped).",
+        example: 'const bars = await alpaca.marketData.getCryptoBarsFor("BTC/USD", { loc: "us", timeframe: "1Day", start: new Date("2024-01-01") });',
+    },
+    "marketData.getOptionBarsFor": {
+        description: "Single-symbol historical option bars as canonical `Bar[]` (unwrapped).",
+        example: 'const bars = await alpaca.marketData.getOptionBarsFor("AAPL250117C00150000", { timeframe: "1Day", start: new Date("2024-01-01") });',
+    },
+    "marketData.getStockTradesFor": {
+        description: "Single-symbol historical stock trades as canonical `Trade[]` (unwrapped).",
+        example: 'const trades = await alpaca.marketData.getStockTradesFor("AAPL", { start: new Date("2024-01-02") });',
+    },
+    "marketData.getCryptoTradesFor": {
+        description: "Single-symbol historical crypto trades as canonical `Trade[]` (unwrapped).",
+        example: 'const trades = await alpaca.marketData.getCryptoTradesFor("BTC/USD", { loc: "us", start: new Date("2024-01-02") });',
+    },
+    "marketData.getStockQuotesFor": {
+        description: "Single-symbol historical stock quotes as canonical `Quote[]` (unwrapped).",
+        example: 'const quotes = await alpaca.marketData.getStockQuotesFor("AAPL", { start: new Date("2024-01-02") });',
+    },
+    "marketData.getCryptoQuotesFor": {
+        description: "Single-symbol historical crypto quotes as canonical `Quote[]` (unwrapped).",
+        example: 'const quotes = await alpaca.marketData.getCryptoQuotesFor("BTC/USD", { loc: "us", start: new Date("2024-01-02") });',
+    },
+    "marketData.getStockCandlesFor": {
+        description: "Single-symbol historical stock bars as chart-ready columnar `Candles` (unwrapped).",
+        example: 'const candles = await alpaca.marketData.getStockCandlesFor("AAPL", { timeframe: "1Day", start: new Date("2024-01-01") });',
+    },
+    "marketData.getCryptoCandlesFor": {
+        description: "Single-symbol historical crypto bars as chart-ready columnar `Candles` (unwrapped).",
+        example: 'const candles = await alpaca.marketData.getCryptoCandlesFor("BTC/USD", { loc: "us", timeframe: "1Day", start: new Date("2024-01-01") });',
+    },
     "marketData.iterateStockBars": {
         description: "Lazily yield `{ symbol, value }` stock-bar records across symbols and pages.",
         example: 'for await (const { symbol, value } of alpaca.marketData.iterateStockBars({ symbols: ["AAPL"], timeframe: "1Day", start: new Date("2024-01-01") })) console.log(symbol, value.c);',

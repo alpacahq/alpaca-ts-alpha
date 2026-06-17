@@ -830,6 +830,95 @@ export class MarketDataClient {
         return toCandlesBySymbol(await this.getCryptoBars(req, opts), opts);
     }
 
+    // --- Normalized market-data shapes: single-symbol convenience ----------
+    //
+    // The `get<Asset><Thing>` accessors above always return a `{ [symbol]: T[] }`
+    // map, so a single-symbol call still has to be unwrapped (`result[symbol]`).
+    // These `*For(symbol, ...)` variants wrap them and hand back the unwrapped
+    // canonical value for one symbol, inheriting the same pagination, symbol
+    // stamping, and real-`Date` normalization.
+
+    /** Unwrap a single-symbol `{ [symbol]: T[] }` map to that symbol's series (empty when absent). */
+    private static firstSeries<T>(map: { [symbol: string]: T[] }, symbol: string): T[] {
+        return map[symbol] ?? Object.values(map)[0] ?? [];
+    }
+
+    /** Historical stock bars for one symbol as canonical {@link marketDataShapes.Bar}s. */
+    async getStockBarsFor(
+        symbol: string,
+        req: Omit<WithTimeframe<WithSymbolList<marketData.StockBarsRequest>>, "pageToken" | "symbols">,
+        opts?: SymbolCollectOptions,
+    ): Promise<marketDataShapes.Bar[]> {
+        return MarketDataClient.firstSeries(await this.getStockBars({ ...req, symbols: [symbol] }, opts), symbol);
+    }
+    /** Historical crypto bars for one symbol as canonical {@link marketDataShapes.Bar}s. */
+    async getCryptoBarsFor(
+        symbol: string,
+        req: Omit<WithTimeframe<WithSymbolList<marketData.CryptoBarsRequest>>, "pageToken" | "symbols">,
+        opts?: SymbolCollectOptions,
+    ): Promise<marketDataShapes.Bar[]> {
+        return MarketDataClient.firstSeries(await this.getCryptoBars({ ...req, symbols: [symbol] }, opts), symbol);
+    }
+    /** Historical option bars for one symbol as canonical {@link marketDataShapes.Bar}s. */
+    async getOptionBarsFor(
+        symbol: string,
+        req: Omit<WithTimeframe<WithSymbolList<marketData.OptionBarsRequest>>, "pageToken" | "symbols">,
+        opts?: SymbolCollectOptions,
+    ): Promise<marketDataShapes.Bar[]> {
+        return MarketDataClient.firstSeries(await this.getOptionBars({ ...req, symbols: [symbol] }, opts), symbol);
+    }
+
+    /** Historical stock trades for one symbol as canonical {@link marketDataShapes.Trade}s. */
+    async getStockTradesFor(
+        symbol: string,
+        req: Omit<WithSymbolList<marketData.StockTradesRequest>, "pageToken" | "symbols">,
+        opts?: SymbolCollectOptions,
+    ): Promise<marketDataShapes.Trade[]> {
+        return MarketDataClient.firstSeries(await this.getStockTrades({ ...req, symbols: [symbol] }, opts), symbol);
+    }
+    /** Historical crypto trades for one symbol as canonical {@link marketDataShapes.Trade}s. */
+    async getCryptoTradesFor(
+        symbol: string,
+        req: Omit<WithSymbolList<marketData.CryptoTradesRequest>, "pageToken" | "symbols">,
+        opts?: SymbolCollectOptions,
+    ): Promise<marketDataShapes.Trade[]> {
+        return MarketDataClient.firstSeries(await this.getCryptoTrades({ ...req, symbols: [symbol] }, opts), symbol);
+    }
+
+    /** Historical stock quotes for one symbol as canonical {@link marketDataShapes.Quote}s. */
+    async getStockQuotesFor(
+        symbol: string,
+        req: Omit<WithSymbolList<marketData.StockQuotesRequest>, "pageToken" | "symbols">,
+        opts?: SymbolCollectOptions,
+    ): Promise<marketDataShapes.Quote[]> {
+        return MarketDataClient.firstSeries(await this.getStockQuotes({ ...req, symbols: [symbol] }, opts), symbol);
+    }
+    /** Historical crypto quotes for one symbol as canonical {@link marketDataShapes.Quote}s. */
+    async getCryptoQuotesFor(
+        symbol: string,
+        req: Omit<WithSymbolList<marketData.CryptoQuotesRequest>, "pageToken" | "symbols">,
+        opts?: SymbolCollectOptions,
+    ): Promise<marketDataShapes.Quote[]> {
+        return MarketDataClient.firstSeries(await this.getCryptoQuotes({ ...req, symbols: [symbol] }, opts), symbol);
+    }
+
+    /** Historical stock bars for one symbol as chart-ready columnar {@link marketDataShapes.Candles}. */
+    async getStockCandlesFor(
+        symbol: string,
+        req: Omit<WithTimeframe<WithSymbolList<marketData.StockBarsRequest>>, "pageToken" | "symbols">,
+        opts?: SymbolCollectOptions & marketDataShapes.ChartOptions,
+    ): Promise<marketDataShapes.Candles> {
+        return marketDataShapes.toCandles(await this.getStockBarsFor(symbol, req, opts), opts);
+    }
+    /** Historical crypto bars for one symbol as chart-ready columnar {@link marketDataShapes.Candles}. */
+    async getCryptoCandlesFor(
+        symbol: string,
+        req: Omit<WithTimeframe<WithSymbolList<marketData.CryptoBarsRequest>>, "pageToken" | "symbols">,
+        opts?: SymbolCollectOptions & marketDataShapes.ChartOptions,
+    ): Promise<marketDataShapes.Candles> {
+        return marketDataShapes.toCandles(await this.getCryptoBarsFor(symbol, req, opts), opts);
+    }
+
     // --- Pagination: multi-symbol endpoints --------------------------------
     //
     // `iterate*` yields flat `{ symbol, value }` records across every symbol and

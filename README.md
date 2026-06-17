@@ -95,7 +95,9 @@ guessable:
   generic `submit` escape hatch.
 - **Normalized REST:** `get<Asset><Thing>` returns canonical, symbol-keyed
   shapes (`getStockBars`, `getCryptoTrades`, ...); `get<Asset>Candles` returns
-  the chart-ready columnar form.
+  the chart-ready columnar form. Each has a single-symbol `get<Asset><Thing>For(symbol)`
+  variant (`getStockBarsFor`, `getStockCandlesFor`, ...) that returns the
+  unwrapped value instead of a `{ [symbol]: ... }` map.
 - **Pagination:** `iterate<X>` lazily yields across pages; `collect<X>` /
   `collect<X>BySymbol` eagerly returns them.
 - **Workflow:** verb-named one-offs (`submitAndWait`, `closeAllPositions`,
@@ -397,9 +399,11 @@ Multi-symbol market-data methods accept a comma-separated `string` or a
 `string[]`. Time fields: trading models parse timestamps to `Date`, and
 market-data models also **type** them as `Date`. Note that the multi-symbol/list
 responses deserialize their symbol-keyed maps verbatim, so nested timestamps can
-still arrive as ISO `string`s at runtime despite that type; the normalized
-`marketDataShapes` accessors below always hand back real `Date`s, and for raw
-responses you can normalize with `values.toDate` / `values.toISO`.
+still arrive as ISO `string`s at runtime despite that type. The fix is to prefer
+the normalized accessors below (`getStockBars`, the single-symbol `getStockBarsFor`,
+etc.), which always hand back real `Date`s; only the **raw** generated map
+responses (e.g. `alpaca.marketData.stocks.stockBars`) carry the caveat, and there
+you can normalize with `values.toDate` / `values.toISO`.
 
 ## Normalized market-data shapes (REST + streaming unified)
 
@@ -432,9 +436,12 @@ stream.connect();
 
 Normalized accessors: `getStockBars`/`getCryptoBars`/`getOptionBars`,
 `getStockTrades`/`getCryptoTrades`, `getStockQuotes`/`getCryptoQuotes`, and the
-chart-ready `getStockCandles`/`getCryptoCandles`. For any other endpoint, the
-pure mappers normalize a raw response yourself: `marketDataShapes.toBar`,
-`toStockTrade`/`toCryptoTrade`/`toOptionTrade`,
+chart-ready `getStockCandles`/`getCryptoCandles`. Each returns a `{ [symbol]: T }`
+map; for a single symbol, the `*For(symbol)` variants
+(`getStockBarsFor`, `getStockCandlesFor`, ... one per accessor) return the
+unwrapped value directly so you skip the `result[symbol]` step. For any other
+endpoint, normalize a raw response yourself with the pure mappers:
+`marketDataShapes.toBar`, `toStockTrade`/`toCryptoTrade`/`toOptionTrade`,
 `toStockQuote`/`toCryptoQuote`/`toOptionQuote`, and the `*BySymbol` helpers.
 
 ### Chart-ready helpers
@@ -2135,7 +2142,7 @@ const price = await alpaca.marketData.getLatestPrice("AAPL");
 
 #### `alpaca.marketData` — normalized accessors
 
-Auto-paginated, symbol-keyed accessors returning canonical Bar/Trade/Quote shapes (and chart-ready Candles), unified with the streaming layer.
+Auto-paginated, symbol-keyed accessors returning canonical Bar/Trade/Quote shapes (and chart-ready Candles), unified with the streaming layer. Each has a single-symbol `*For(symbol)` variant that returns the unwrapped value.
 
 ##### `alpaca.marketData.getStockBars`
 
@@ -2243,6 +2250,78 @@ const candles = await alpaca.marketData.getCryptoCandles({
   timeframe: "1Day",
   start: new Date("2024-01-01"),
 });
+```
+
+##### `alpaca.marketData.getStockBarsFor`
+
+Single-symbol historical stock bars as canonical `Bar[]` (unwrapped, not a symbol map).
+
+```ts
+const bars = await alpaca.marketData.getStockBarsFor("AAPL", { timeframe: "1Day", start: new Date("2024-01-01") });
+```
+
+##### `alpaca.marketData.getCryptoBarsFor`
+
+Single-symbol historical crypto bars as canonical `Bar[]` (unwrapped).
+
+```ts
+const bars = await alpaca.marketData.getCryptoBarsFor("BTC/USD", { loc: "us", timeframe: "1Day", start: new Date("2024-01-01") });
+```
+
+##### `alpaca.marketData.getOptionBarsFor`
+
+Single-symbol historical option bars as canonical `Bar[]` (unwrapped).
+
+```ts
+const bars = await alpaca.marketData.getOptionBarsFor("AAPL250117C00150000", { timeframe: "1Day", start: new Date("2024-01-01") });
+```
+
+##### `alpaca.marketData.getStockTradesFor`
+
+Single-symbol historical stock trades as canonical `Trade[]` (unwrapped).
+
+```ts
+const trades = await alpaca.marketData.getStockTradesFor("AAPL", { start: new Date("2024-01-02") });
+```
+
+##### `alpaca.marketData.getCryptoTradesFor`
+
+Single-symbol historical crypto trades as canonical `Trade[]` (unwrapped).
+
+```ts
+const trades = await alpaca.marketData.getCryptoTradesFor("BTC/USD", { loc: "us", start: new Date("2024-01-02") });
+```
+
+##### `alpaca.marketData.getStockQuotesFor`
+
+Single-symbol historical stock quotes as canonical `Quote[]` (unwrapped).
+
+```ts
+const quotes = await alpaca.marketData.getStockQuotesFor("AAPL", { start: new Date("2024-01-02") });
+```
+
+##### `alpaca.marketData.getCryptoQuotesFor`
+
+Single-symbol historical crypto quotes as canonical `Quote[]` (unwrapped).
+
+```ts
+const quotes = await alpaca.marketData.getCryptoQuotesFor("BTC/USD", { loc: "us", start: new Date("2024-01-02") });
+```
+
+##### `alpaca.marketData.getStockCandlesFor`
+
+Single-symbol historical stock bars as chart-ready columnar `Candles` (unwrapped).
+
+```ts
+const candles = await alpaca.marketData.getStockCandlesFor("AAPL", { timeframe: "1Day", start: new Date("2024-01-01") });
+```
+
+##### `alpaca.marketData.getCryptoCandlesFor`
+
+Single-symbol historical crypto bars as chart-ready columnar `Candles` (unwrapped).
+
+```ts
+const candles = await alpaca.marketData.getCryptoCandlesFor("BTC/USD", { loc: "us", timeframe: "1Day", start: new Date("2024-01-01") });
 ```
 
 #### `alpaca.marketData` — pagination helpers

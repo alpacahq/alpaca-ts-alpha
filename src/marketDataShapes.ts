@@ -132,10 +132,12 @@ export interface Quote {
 
 /**
  * Coerce a timestamp to a `Date`. The generated models type bar/trade/quote
- * timestamps as `Date`, but the response deserializers pass the symbol-keyed
- * maps through verbatim, so nested records can still carry the raw RFC-3339
- * `string` at runtime. Normalizing here keeps the canonical `timestamp` a real
- * `Date` regardless of source (REST map, REST array, or stream).
+ * timestamps as `Date`, but the symbol-keyed map responses are deserialized
+ * verbatim, so nested records can still carry the raw RFC-3339 `string` at
+ * runtime (the generated types stay faithful to the spec, so this gap is fixed
+ * here rather than by re-typing them). Normalizing here keeps the canonical
+ * `timestamp` a real `Date` regardless of source (REST map, REST array, or
+ * stream) — which is why the normalized accessors are the honest-`Date` path.
  */
 function asDate(value: Date | string | number): Date {
     return value instanceof Date ? value : new Date(value);
