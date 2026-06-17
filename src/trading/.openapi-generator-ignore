@@ -24,5 +24,7 @@
 
 # Hand-maintained transport shim. The shared HTTP transport lives in
 # `src/core/runtime.ts`; this file only adds the host + Configuration subclass.
-# Keep the generator from clobbering it.
+# (Historical: this entry protected the shim from being clobbered while the SDK
+# was still regenerated. The SDK is now hand-maintained and no longer
+# regenerated, so this file is inert — kept for provenance.)
 runtime.ts

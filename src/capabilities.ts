@@ -10,8 +10,7 @@
  *
  * The `methods` lists are representative of the most-used operations, not an
  * exhaustive dump of every generated method (each REST method also has a
- * `...Raw()` variant returning the raw `Response`). Hand-written and
- * generation-safe.
+ * `...Raw()` variant returning the raw `Response`). Hand-written.
  *
  * ## The facade has two layers
  *

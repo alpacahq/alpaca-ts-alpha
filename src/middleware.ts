@@ -1,6 +1,6 @@
 /**
  * Observability middleware built on the transport's {@link Middleware} hook
- * (`pre`/`post`/`onError`). Hand-written, generation-safe module.
+ * (`pre`/`post`/`onError`). Hand-written module.
  *
  * The runtime passes the same `init` object reference to `pre`, `post`, and
  * `onError` within a single request attempt, so we correlate timing and a

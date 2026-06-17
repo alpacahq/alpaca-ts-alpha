@@ -11,8 +11,8 @@
  * every `Api` built from the same `Configuration` (i.e. a whole sub-client), so
  * the trading and market-data hosts are throttled independently.
  *
- * This module is hand-written and lives outside the generated trees so it
- * survives SDK regeneration.
+ * This module is hand-written and lives outside the generated trees, which are
+ * kept untouched as a faithful snapshot of the OpenAPI spec.
  */
 
 /** Tuning for the client-side {@link RateLimiter}. */

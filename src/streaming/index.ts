@@ -1,7 +1,7 @@
 /**
  * Real-time streaming clients for Alpaca's WebSocket APIs.
  *
- * Hand-written, generation-safe module (the generated SDK is REST-only).
+ * Hand-written module (the generated SDK is REST-only).
  *
  * @example Market data (data-visualization backend)
  * ```ts

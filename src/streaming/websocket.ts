@@ -1,8 +1,7 @@
 /**
  * Base WebSocket transport shared by the market-data and trading streams.
  *
- * This is a hand-written, generation-safe module (the generated SDK is
- * REST-only). It handles the cross-cutting concerns both Alpaca streams need:
+ * This is a hand-written module (the generated SDK is REST-only). It handles the cross-cutting concerns both Alpaca streams need:
  * connect, authenticate, msgpack/JSON framing, ping/pong keepalive, reconnect
  * with exponential backoff, and automatic re-subscribe after a reconnect.
  *

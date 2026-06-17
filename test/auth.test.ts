@@ -8,7 +8,7 @@ import * as auth from '../src/auth';
  * Authentication ergonomics: `keyId`/`secret` are accepted directly on
  * `Configuration`, the legacy `apiKey` string is now a loud error (it used to
  * silently send the same value for both headers -> 403), and `apiKeyAuth()` is
- * a generation-safe resolver. Run against BOTH duplicated runtimes.
+ * a hand-written resolver. Run against BOTH duplicated runtimes.
  */
 
 const KEY_ID = 'AKTEST123';

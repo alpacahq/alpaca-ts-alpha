@@ -10,8 +10,8 @@
  * so there is exactly one identity for `trading.ApiError`,
  * `marketData.ApiError`, and the top-level `errors.ApiError`.
  *
- * This module lives outside the generated `apis/`/`models/` trees so it survives
- * SDK regeneration.
+ * This module lives outside the generated `apis/`/`models/` trees, which are kept
+ * untouched as a faithful snapshot of the OpenAPI spec.
  */
 
 /**

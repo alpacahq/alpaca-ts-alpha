@@ -19,8 +19,8 @@ the API.
 Export your credentials once:
 
 ```bash
-export APCA_KEY_ID="your-key-id"
-export APCA_SECRET="your-secret"
+export APCA_API_KEY_ID="your-key-id"
+export APCA_API_SECRET_KEY="your-secret"
 ```
 
 ## [`trading-bot.ts`](./trading-bot.ts)

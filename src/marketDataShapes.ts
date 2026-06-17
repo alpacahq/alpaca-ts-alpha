@@ -15,8 +15,9 @@
  * same types so both paths converge. The chart helpers reshape a `Bar[]` into
  * the columnar / point-series forms common charting libraries expect.
  *
- * It is hand-written and lives outside the generated `apis/`/`models/` trees so
- * it survives SDK regeneration. It imports the generated models for TYPES ONLY
+ * It is hand-written and lives outside the generated `apis/`/`models/` trees,
+ * which are kept untouched as a faithful snapshot of the OpenAPI spec. It imports
+ * the generated models for TYPES ONLY
  * (erased at build time), so it pulls in no runtime/heavy dependencies and is
  * safe to use from the REST-only entrypoint.
  *

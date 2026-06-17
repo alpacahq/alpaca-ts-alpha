@@ -30,8 +30,8 @@ pass credentials once and reach everything through the `.trading` and
 import { Alpaca } from "@alpacahq/alpaca-ts-alpha";
 
 const alpaca = new Alpaca({
-  keyId: process.env.APCA_KEY_ID!,
-  secret: process.env.APCA_SECRET!,
+  keyId: process.env.APCA_API_KEY_ID,
+  secret: process.env.APCA_API_SECRET_KEY,
   paper: true, // default; set false for live trading
 });
 
@@ -610,6 +610,16 @@ npm test         # vitest
 `dist/` is git-ignored and produced by the build (and automatically on
 `npm publish` / `npm pack` via `prepare`). Runnable end-to-end examples live in
 [`examples/`](./examples).
+
+This SDK was originally scaffolded with
+[OpenAPI Generator](https://openapi-generator.tech), but it is now **fully
+hand-maintained** — there are no further regenerations. The generated REST
+clients and models under `src/trading/{apis,models}` and
+`src/market-data/{apis,models}` are left untouched so they remain a faithful
+snapshot of Alpaca's OpenAPI spec; everything else — the `Alpaca` facade, order
+builders, normalized market-data shapes, pagination, streaming, and the shared
+transport — is hand-written in separate modules. When contributing, edit the
+hand-written modules and don't hand-edit the generated `apis`/`models` trees.
 
 ## Background
 

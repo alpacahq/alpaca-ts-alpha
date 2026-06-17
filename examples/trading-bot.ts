@@ -8,17 +8,17 @@
  * branching on the `ApiError` subclasses.
  *
  * Run:
- *   APCA_KEY_ID=... APCA_SECRET=... npx tsx examples/trading-bot.ts
+ *   APCA_API_KEY_ID=... APCA_API_SECRET_KEY=... npx tsx examples/trading-bot.ts
  */
 // In your own app this import is just:
 //   import { Alpaca, ApiError, RateLimitError, values } from "@alpacahq/alpaca-ts-alpha";
 import { Alpaca, ApiError, RateLimitError, values } from "../src/index";
 
 async function main(): Promise<void> {
-    const keyId = process.env.APCA_KEY_ID;
-    const secret = process.env.APCA_SECRET;
+    const keyId = process.env.APCA_API_KEY_ID;
+    const secret = process.env.APCA_API_SECRET_KEY;
     if (!keyId || !secret) {
-        console.error("Set APCA_KEY_ID and APCA_SECRET in the environment.");
+        console.error("Set APCA_API_KEY_ID and APCA_API_SECRET_KEY in the environment.");
         process.exit(1);
     }
 

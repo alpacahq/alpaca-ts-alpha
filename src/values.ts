@@ -18,7 +18,7 @@
  * helpers a Go user gets for free, plus the TimeFrame builder both SDKs ship.
  *
  * This module is hand-written and lives outside the generated `apis/`/`models/`
- * trees so it survives SDK regeneration.
+ * trees, which are kept untouched as a faithful snapshot of the OpenAPI spec.
  */
 
 /**

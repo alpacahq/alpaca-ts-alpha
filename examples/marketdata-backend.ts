@@ -14,7 +14,7 @@
  * status with Alpaca's request id for debugging.
  *
  * Run:
- *   APCA_KEY_ID=... APCA_SECRET=... npx tsx examples/marketdata-backend.ts
+ *   APCA_API_KEY_ID=... APCA_API_SECRET_KEY=... npx tsx examples/marketdata-backend.ts
  *   curl -N http://localhost:8080/stream
  *   curl http://localhost:8080/price?symbol=AAPL
  */
@@ -22,10 +22,10 @@ import * as http from "node:http";
 // In your own app this import is just: import { Alpaca, TimeFrame, ApiError } from "@alpacahq/alpaca-ts-alpha";
 import { Alpaca, TimeFrame, ApiError } from "../src/index";
 
-const keyId = process.env.APCA_KEY_ID;
-const secret = process.env.APCA_SECRET;
+const keyId = process.env.APCA_API_KEY_ID;
+const secret = process.env.APCA_API_SECRET_KEY;
 if (!keyId || !secret) {
-    console.error("Set APCA_KEY_ID and APCA_SECRET in the environment.");
+    console.error("Set APCA_API_KEY_ID and APCA_API_SECRET_KEY in the environment.");
     process.exit(1);
 }
 
