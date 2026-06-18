@@ -653,6 +653,11 @@ function collectSymbolMap<T>(
  * The ergonomic helpers on this client are enumerated in `ergonomicCapabilities`
  * (find one with `findErgonomic`); the generated accessors in `capabilities`
  * (find one with `findCapabilities`).
+ *
+ * The `paper` option is accepted (it shares {@link AlpacaClientOptions} with the
+ * trading client) but has no effect here: market data always uses
+ * `data.alpaca.markets`. Free vs paid data is selected by your subscription and
+ * the per-request `feed` parameter (`iex` is the only feed available for free).
  */
 export class MarketDataClient {
     private readonly config: marketData.Configuration;
@@ -1247,7 +1252,11 @@ export class Alpaca {
         return (this._trading ??= new TradingClient(this.options));
     }
 
-    /** Market-data APIs and the market-data streams. */
+    /**
+     * Market-data APIs and the market-data streams. The `paper` flag does not
+     * apply here — every call targets `data.alpaca.markets`; free vs paid data
+     * is governed by your subscription and the `feed` parameter.
+     */
     get marketData(): MarketDataClient {
         return (this._marketData ??= new MarketDataClient(this.options));
     }

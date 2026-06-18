@@ -181,6 +181,31 @@ function parseRequestId(headers: Headers | undefined): string | undefined {
     return headers.get("X-Request-ID") ?? undefined;
 }
 
+/**
+ * Market-data 403s from Alpaca are opaque about the cause: a free-tier key that
+ * (explicitly or via a paid default) hits the SIP feed fails with
+ * `subscription does not permit querying recent SIP data`, which doesn't tell a
+ * first-time user what to change. When we detect that shape, append actionable
+ * guidance to the message without touching `status`/`code` (so `instanceof`
+ * checks and programmatic branching keep working).
+ */
+const SIP_HINT =
+    'Your account may not have SIP market-data access. For free data pass `{ feed: "iex" }`; ' +
+    "to query SIP either set `end` to at least 15 minutes in the past or upgrade to a paid market-data subscription.";
+
+function augmentMessage(status: number, message: string): string {
+    if (status !== 403) {
+        return message;
+    }
+    const lower = message.toLowerCase();
+    // Match Alpaca's SIP/subscription 403 wording without over-triggering on
+    // unrelated permission errors (e.g. wrong trading environment).
+    if (lower.includes("sip") || lower.includes("subscription")) {
+        return `${message} (${SIP_HINT})`;
+    }
+    return message;
+}
+
 function errorForStatus(
     status: number,
     response: Response,
@@ -243,6 +268,7 @@ export async function buildApiError(response: Response): Promise<ApiError> {
     const rateLimit = parseRateLimit(response.headers);
     const retryAfterMs = computeRetryAfterMs(response.headers, rateLimit);
     const requestId = parseRequestId(response.headers);
+    message = augmentMessage(response.status, message);
     return errorForStatus(response.status, response, code, message, rateLimit, retryAfterMs, requestId);
 }
 

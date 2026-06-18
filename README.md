@@ -81,7 +81,7 @@ const positions = await alpaca.trading.positions.getAllOpenPositions();
 // Ergonomic order placement (see "Placing orders")
 await alpaca.trading.orders.market({ symbol: "AAPL", qty: 1, side: "buy" });
 
-// Streaming — shares the same credentials and paper/live setting
+// Streaming — shares the same credentials (market data ignores paper/live)
 const bars = alpaca.marketData.stockStream({ feed: "iex" });
 bars.onBar((b) => console.log(b.symbol, b.close));
 bars.onConnect(() => bars.subscribeForBars(["AAPL", "MSFT"]));
@@ -499,6 +499,36 @@ toLineSeries(history.AAPL, "close");  // [{ time, value }]
 These live in the `marketDataShapes` namespace too and are re-exported at the top
 level. Everything here is REST-only (no `ws`/`msgpack`), so it is available from
 the `@alpacahq/alpaca-ts-alpha/rest` entrypoint as well.
+
+### Data feeds & the free-tier 15-minute delay
+
+A few market-data gotchas are worth knowing before your first request — they
+come from Alpaca's data plans, not the SDK:
+
+- **Feeds.** US-equity endpoints take a `feed` parameter: `iex` (free), `sip`
+  (all US exchanges, paid), plus `otc`/`boats`. The SDK does **not** force a
+  default for REST — when you omit `feed`, Alpaca picks the *best feed your
+  subscription allows* (`iex` on the free plan), so a free key won't 403 on a
+  default request. The streaming helpers default to `feed: "iex"` so a free key
+  connects out of the box; pass `{ feed: "sip" }` explicitly once you have a
+  subscription.
+- **The 15-minute rule.** On the free plan, SIP data for the **last 15 minutes**
+  is restricted. Two consequences:
+  - Explicitly requesting `feed: "sip"` with `end` defaulting to *now* fails
+    with `403 subscription does not permit querying recent SIP data`. The SDK
+    detects this 403 and appends guidance to the error message (pass
+    `{ feed: "iex" }`, move `end` back ≥15 min, or upgrade).
+  - With `iex`, recent bars exist but the trailing ~15 minutes can be sparse or
+    empty, so `end: new Date()` may look like it "returns nothing". If you need
+    a guaranteed-populated window on the free tier, set `end` ~15 minutes in the
+    past yourself.
+
+  The SDK deliberately does **not** clamp `end` for you — doing so silently
+  would hide data that paid subscribers are entitled to.
+- **`paper` is irrelevant to market data.** The `paper` flag only switches the
+  *trading* host (`paper-api` vs `api`); every market-data REST/stream call goes
+  to `data.alpaca.markets` regardless. Free vs paid *data* is governed by your
+  subscription and the `feed` parameter, not by `paper`.
 
 ## Real-time streaming
 

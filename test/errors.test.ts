@@ -48,6 +48,35 @@ describe('buildApiError - status to subclass mapping', () => {
     }
 });
 
+describe('buildApiError - market-data 403 feed hint', () => {
+    it('appends a feed/SIP hint when a 403 mentions SIP subscription', async () => {
+        const err = await buildApiError(
+            errorResponse(403, { message: 'subscription does not permit querying recent SIP data' }),
+        );
+        expect(err).toBeInstanceOf(PermissionError);
+        expect(err.status).toBe(403);
+        // Original message is preserved; guidance is appended.
+        expect(err.message).toContain('subscription does not permit querying recent SIP data');
+        expect(err.message).toContain('{ feed: "iex" }');
+        expect(err.message).toContain('15 minutes');
+    });
+
+    it('does not alter unrelated 403 messages', async () => {
+        const err = await buildApiError(
+            errorResponse(403, { code: 40310000, message: 'forbidden' }),
+        );
+        expect(err).toBeInstanceOf(PermissionError);
+        expect(err.message).toBe('forbidden');
+    });
+
+    it('does not append the hint to non-403 statuses mentioning sip', async () => {
+        const err = await buildApiError(
+            errorResponse(400, { message: 'invalid sip parameter' }),
+        );
+        expect(err.message).toBe('invalid sip parameter');
+    });
+});
+
 describe('buildApiError - rate-limit metadata', () => {
     it('parses X-RateLimit-* headers into rateLimit', async () => {
         const resetSecs = Math.floor(Date.now() / 1000) + 30;
