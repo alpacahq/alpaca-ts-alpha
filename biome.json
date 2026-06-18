@@ -7,6 +7,7 @@
       "src/**/*.ts",
       "test/**/*.ts",
       "examples/**/*.ts",
+      "skills/**/*.ts",
       "scripts/**/*.ts",
       "!src/trading/apis",
       "!src/trading/models",

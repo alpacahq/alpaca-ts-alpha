@@ -13,7 +13,7 @@ the Trading API and Market Data API directly through the SDK.
 ## Workflow
 
 1. Confirm the target directory and app name.
-2. Create the app locally with `scripts/scaffold.py`.
+2. Create the app locally with `scripts/scaffold.ts`.
 3. Default to paper trading (`APCA_PAPER="true"`). Do not configure live trading.
 4. Report the target path and give next commands. Do not print secrets from `.env.local`.
 
@@ -22,10 +22,14 @@ the Trading API and Market Data API directly through the SDK.
 From this skill directory:
 
 ```bash
-python scripts/scaffold.py \
+npx tsx scripts/scaffold.ts \
   --target-directory /path/to/my-alpaca-dashboard \
   --app-name my-alpaca-dashboard
 ```
+
+If the local runtime supports it, `node scripts/scaffold.ts` or
+`bun scripts/scaffold.ts` are also acceptable. Prefer `npx tsx` for Node 20
+compatibility.
 
 The script reads these credential environment variables when flags are omitted:
 
@@ -45,6 +49,13 @@ Useful flags:
 The target directory may already contain unrelated files. The scaffolder merges
 the template into the target, but refuses to overwrite any existing generated
 path, including `.env.local`.
+
+Common failures:
+
+- TypeScript runner unavailable: use `npx tsx`, `node` with native TypeScript support, or `bun`.
+- Missing credentials: set `APCA_API_KEY_ID` and `APCA_API_SECRET_KEY`, pass `--key-id` / `--secret`, or use `--allow-placeholder-credentials`.
+- Invalid app name: use a lowercase npm package name with no spaces, uppercase letters, leading dot, or leading underscore.
+- Unsafe target: the target must not be a file or symlink, and generated paths must not already exist.
 
 ## Safety Rules
 
