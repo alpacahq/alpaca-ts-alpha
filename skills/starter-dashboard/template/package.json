@@ -9,7 +9,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@alpacahq/alpaca-ts-alpha": "^0.1.1",
+    "@alpacahq/alpaca-ts-alpha": "^0.2.0",
     "lucide-react": "^1.20.0",
     "next": "^16.0.0",
     "react": "^19.0.0",
