@@ -114,7 +114,11 @@ const alpaca = new Alpaca({
 - **REST-only builds:** import from `@alpacahq/alpaca-ts-alpha/rest` to keep
   `ws`/`@msgpack/msgpack` out of the module graph. Stream factories and
   `submitAndWait` throw from this entrypoint — import the root package for
-  streams.
+  streams. On edge/browser runtimes (Cloudflare Workers/`workerd`, Vercel Edge,
+  Deno, browsers) the root import auto-resolves to this REST-only build via the
+  package `exports` conditions, so streaming is unavailable there (`ws` can't
+  run on edge) but REST works without the `Class extends value [object Module]`
+  crash.
 - **ESM & CJS dual package:** don't load the SDK through both `import` and
   `require` in one process if you rely on `instanceof` against its classes
   (e.g. `ApiError`) — you may compare against two copies.

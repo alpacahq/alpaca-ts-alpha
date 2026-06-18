@@ -22,6 +22,32 @@
   },
   "exports": {
     ".": {
+      "workerd": {
+        "types": "./dist/rest.d.mts",
+        "default": "./dist/rest.mjs"
+      },
+      "worker": {
+        "types": "./dist/rest.d.mts",
+        "default": "./dist/rest.mjs"
+      },
+      "edge-light": {
+        "types": "./dist/rest.d.mts",
+        "default": "./dist/rest.mjs"
+      },
+      "deno": {
+        "types": "./dist/rest.d.mts",
+        "default": "./dist/rest.mjs"
+      },
+      "browser": {
+        "import": {
+          "types": "./dist/rest.d.mts",
+          "default": "./dist/rest.mjs"
+        },
+        "require": {
+          "types": "./dist/rest.d.ts",
+          "default": "./dist/rest.js"
+        }
+      },
       "import": {
         "types": "./dist/index.d.mts",
         "default": "./dist/index.mjs"

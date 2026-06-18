@@ -558,10 +558,15 @@ const alpaca = new Alpaca({
 
 The REST client needs nothing beyond the Node platform globals. The **streaming**
 clients (WebSockets) pull in two small runtime dependencies — [`ws`](https://github.com/websockets/ws)
-and [`@msgpack/msgpack`](https://github.com/msgpack/msgpack-javascript) — which
-are only loaded when you actually open a stream. If you only use REST, import
-from the [`@alpacahq/alpaca-ts-alpha/rest`](#rest-only-entrypoint) subpath and they are never
-loaded.
+and [`@msgpack/msgpack`](https://github.com/msgpack/msgpack-javascript). At
+runtime the `Alpaca` facade only constructs them when you actually open a stream,
+but the **root entrypoint's module graph statically includes them** (it
+re-exports the `streaming` namespace), so a bundler resolving
+`@alpacahq/alpaca-ts-alpha` will see `ws` / `@msgpack/msgpack` / `node:events`.
+If you only use REST — or you target an edge/browser runtime where `ws` cannot
+run — import from the [`@alpacahq/alpaca-ts-alpha/rest`](#rest-only-entrypoint)
+subpath (or rely on the automatic edge resolution described in
+[Module formats](#module-formats-esm--cjs)) and they are never pulled in.
 
 ## REST-only entrypoint
 
@@ -575,6 +580,10 @@ called from this entrypoint — import from `@alpacahq/alpaca-ts-alpha` when you
 ```ts
 import { Alpaca } from "@alpacahq/alpaca-ts-alpha/rest";
 ```
+
+On edge and browser runtimes you usually don't need to reach for this subpath
+explicitly — the root entrypoint resolves here automatically (see
+[Module formats](#module-formats-esm--cjs)).
 
 ## Testing your integration
 
@@ -618,6 +627,22 @@ const { Alpaca } = require("@alpacahq/alpaca-ts-alpha");  // CJS
 > Dual-package caveat: don't load the SDK through *both* `import` and `require`
 > in the same process if you rely on `instanceof` against its exported classes
 > (e.g. `ApiError`), or you may compare against two copies.
+
+### Edge & browser runtimes
+
+The streaming clients depend on `ws` and `node:events`, which don't run on edge
+runtimes (Cloudflare Workers / `workerd`, Vercel Edge, Deno) or in the browser.
+To keep the root import working there, the package `exports` map declares
+`workerd`, `worker`, `edge-light`, `deno`, and `browser` conditions that resolve
+`@alpacahq/alpaca-ts-alpha` to the streaming-free
+[REST-only build](#rest-only-entrypoint) automatically — so a plain
+`import { Alpaca } from "@alpacahq/alpaca-ts-alpha"` builds and runs on those
+targets without the `Class extends value [object Module]` failure that comes
+from a bundler trying to load `ws` / `node:events` on a runtime that lacks them.
+
+The trade-off is the same as importing `/rest` directly: REST works unchanged,
+but the stream factories (`stockStream`, `stream`, ...) and `submitAndWait`
+throw. For real-time streaming, run on Node and import the root entry there.
 
 ## Development
 

@@ -1,4 +1,27 @@
+import { builtinModules } from "node:module";
 import { defineConfig } from "tsup";
+
+/**
+ * Re-add the `node:` scheme to Node builtin imports in the emitted bundles.
+ *
+ * Source uses `node:events`, but tsup strips the prefix in its post-esbuild
+ * pipeline (emitting bare `events`) regardless of `platform`/esbuild plugins.
+ * Edge runtimes and Node ESM rely on the `node:` prefix to recognize builtins,
+ * so rewrite the (single-quoted) `from '<builtin>'` / `require('<builtin>')`
+ * specifiers back to `node:<builtin>` after the chunk is rendered. Scoped to the
+ * known builtins set and import/require positions to avoid touching literals.
+ */
+const builtinSpecifier = new RegExp(
+    `(\\bfrom\\s*|\\brequire\\()(['"])(${builtinModules.map((m) => m.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|")})\\2`,
+    "g",
+);
+const preserveNodeProtocol = {
+    name: "preserve-node-protocol",
+    renderChunk(code: string) {
+        const next = code.replace(builtinSpecifier, (_m, pre, quote, name) => `${pre}${quote}node:${name}${quote}`);
+        return next === code ? undefined : { code: next };
+    },
+};
 
 /**
  * Dual ESM + CJS build.
@@ -29,5 +52,7 @@ export default defineConfig({
     splitting: false,
     treeshake: true,
     target: "es2020",
+    platform: "node",
     outDir: "dist",
+    plugins: [preserveNodeProtocol],
 });
