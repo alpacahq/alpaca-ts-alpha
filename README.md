@@ -12,6 +12,31 @@ and real-time streaming.
   platform-global `fetch`, `Headers`, `URL`, and `AbortController`. (Node 18
   reached end-of-life in April 2025; the package declares `engines.node >=20`.)
 
+## Runtime compatibility
+
+| Runtime | REST | Streaming | Notes |
+| --- | :---: | :---: | --- |
+| **Node.js** >= 20 | ✅ | ✅ | Primary target. |
+| **Bun** | ✅ | ✅ | Node-compatible (`ws` runs). |
+| **Deno** | ✅ | ❌ | Root auto-resolves to the REST build via the `deno` export condition. |
+| **Cloudflare Workers** / `workerd` | ✅ | ❌ | Root auto-resolves to the REST build (`workerd` / `worker`). |
+| **Vercel Edge** | ✅ | ❌ | Root auto-resolves to the REST build (`edge-light`). |
+| **Browser** | ✅ | ❌ | Resolves to the REST build (`browser`). Not recommended — see caveat. |
+
+Legend: ✅ supported · ❌ not supported.
+
+- **Streaming is Node/Bun only.** The WebSocket clients depend on
+  [`ws`](https://github.com/websockets/ws) and `node:events`, which don't run on
+  edge or in the browser. On those targets the package's
+  [export conditions](#edge--browser-runtimes) transparently resolve the root
+  import to the streaming-free [REST build](#rest-only-entrypoint), so REST works
+  and the stream factories (`stockStream`, `stream`, ...) plus `submitAndWait`
+  throw if called. For real-time streaming, run on Node or Bun.
+- **Browser: technically works, but discouraged.** Calling Alpaca directly from a
+  browser ships your `APCA_API_SECRET_KEY` to the client. Prefer a server or
+  proxy (see [`examples/marketdata-backend.ts`](./examples/marketdata-backend.ts))
+  rather than embedding credentials in front-end code.
+
 ## Install
 
 ```bash
