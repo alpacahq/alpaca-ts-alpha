@@ -15,6 +15,36 @@ import { filesToDelete } from "./staleClean.js";
 export type Target = "trading" | "market-data";
 const ALL_TARGETS: Target[] = ["trading", "market-data"];
 
+/** Generator config per target — a fixed lookup so no target value is ever
+ * string-interpolated into a spawned command line. */
+const CONFIG_FILE: Record<Target, string> = {
+  trading: "config/trading.yaml",
+  "market-data": "config/market-data.yaml",
+};
+
+/** Allowlist guard: narrow an untrusted value to a known Target or throw. */
+function assertTarget(target: unknown): Target {
+  if (target !== "trading" && target !== "market-data") {
+    throw new Error(`Invalid target: ${JSON.stringify(target)}`);
+  }
+  return target;
+}
+
+/** Validate a freshly fetched spec is a plausible OpenAPI document before it is
+ * trusted enough to be written to the pinned-specs directory. */
+function assertOpenApiDoc(doc: unknown, file: string): asserts doc is Record<string, unknown> {
+  if (!doc || typeof doc !== "object" || Array.isArray(doc)) {
+    throw new Error(`Fetched ${file} is not a JSON object`);
+  }
+  const d = doc as Record<string, unknown>;
+  if (typeof d.openapi !== "string" && typeof d.swagger !== "string") {
+    throw new Error(`Fetched ${file} is missing an "openapi"/"swagger" version field`);
+  }
+  if (!d.paths || typeof d.paths !== "object") {
+    throw new Error(`Fetched ${file} is missing a "paths" object`);
+  }
+}
+
 export interface GenerateOptions {
   offline: boolean;
   yes: boolean;
@@ -61,9 +91,11 @@ async function refreshSpecs(targets: Target[], opts: GenerateOptions): Promise<v
     return;
   }
   for (const target of targets) {
+    assertTarget(target);
     const file = SPEC_FILES[target];
     log(`• Fetching latest ${file} ...`);
     const live = await fetchSpec(file);
+    assertOpenApiDoc(live, file);
     const pinned = readJson(specPath(target));
     const summary = summarizeSpecDiff(pinned, live);
 
@@ -127,6 +159,7 @@ function readBarrelExports(target: Target, sub: "apis" | "models"): string[] {
 
 /** Steps 6-8: derive, generate, clean stale files; returns the orphan report. */
 function generateTarget(target: Target, opts: GenerateOptions): { removedExports: string[] } {
+  assertTarget(target);
   log(`• Generating ${target} ...`);
   const before = {
     apis: readBarrelExports(target, "apis"),
@@ -140,7 +173,7 @@ function generateTarget(target: Target, opts: GenerateOptions): { removedExports
     return { removedExports: [] };
   }
 
-  run("npx", ["openapi-generator-cli", "generate", "-c", `config/${target}.yaml`], {
+  run("npx", ["openapi-generator-cli", "generate", "-c", CONFIG_FILE[target]], {
     cwd: TOOLING_ROOT,
   });
 
@@ -195,7 +228,7 @@ function printTreeStatus(targets: Target[]): void {
 }
 
 export async function runGenerate(opts: GenerateOptions): Promise<void> {
-  const targets = opts.target ? [opts.target] : ALL_TARGETS;
+  const targets = opts.target ? [assertTarget(opts.target)] : ALL_TARGETS;
   log(
     `Alpaca SDK regeneration — targets: ${targets.join(", ")}` +
       `${opts.offline ? " [offline]" : ""}${opts.dryRun ? " [dry-run]" : ""}`,
