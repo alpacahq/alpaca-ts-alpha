@@ -1,4 +1,3 @@
-.openapi-generator-ignore
 apis/AccountActivitiesApi.ts
 apis/AccountConfigurationsApi.ts
 apis/AccountsApi.ts
@@ -151,4 +150,3 @@ models/Watchlist.ts
 models/WatchlistWithoutAsset.ts
 models/WhitelistedAddress.ts
 models/index.ts
-runtime.ts

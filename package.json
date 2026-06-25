@@ -93,6 +93,8 @@
     "lint": "biome lint .",
     "lint:fix": "biome lint --write .",
     "docs:api": "tsx scripts/gen-api-reference.ts",
+    "generate": "npm --prefix tooling run generate --",
+    "generate:offline": "npm --prefix tooling run generate -- --offline",
     "prepare": "npm run build"
   },
   "dependencies": {
