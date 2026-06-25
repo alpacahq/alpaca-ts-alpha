@@ -71,17 +71,33 @@ const trading: ApiReferenceExamples = {
         description: "Market calendar (sessions) for a market and date range.",
         example: 'await alpaca.trading.calendar.calendar({ market: "us_equity", start: new Date("2024-01-01"), end: new Date("2024-01-31") });',
     },
-    "trading.calendar.clock": {
-        description: "Current market clock: open/closed and next open/close.",
-        example: 'await alpaca.trading.calendar.clock();',
-    },
     "trading.calendar.legacyCalendar": {
         description: "Legacy market-calendar endpoint (prefer `calendar`).",
         example: 'await alpaca.trading.calendar.legacyCalendar({ start: new Date("2024-01-01"), end: new Date("2024-01-31") });',
     },
-    "trading.calendar.legacyClock": {
+    "trading.clock.clock": {
+        description: "Current market clock: open/closed and next open/close.",
+        example: 'await alpaca.trading.clock.clock();',
+    },
+    "trading.clock.legacyClock": {
         description: "Legacy market-clock endpoint (prefer `clock`).",
-        example: 'await alpaca.trading.calendar.legacyClock();',
+        example: 'await alpaca.trading.clock.legacyClock();',
+    },
+    "trading.locates.createLocates": {
+        description: "Create an easy-to-borrow locate request for a short sale.",
+        example: 'await alpaca.trading.locates.createLocates({ createLocateRequest: { symbol: "AAPL", qty: 100 } });',
+    },
+    "trading.locates.getLocate": {
+        description: "Fetch a single locate request by id.",
+        example: 'await alpaca.trading.locates.getLocate({ locateId: "loc_123" });',
+    },
+    "trading.locates.listLocateQuotes": {
+        description: "Locate availability and pricing for one or more symbols.",
+        example: 'await alpaca.trading.locates.listLocateQuotes({ symbols: "AAPL,TSLA" });',
+    },
+    "trading.locates.listLocates": {
+        description: "List locate requests, filtered by status, symbol or date range.",
+        example: 'await alpaca.trading.locates.listLocates({ status: "active" });',
     },
     "trading.corporateActions.getV2CorporateActionsAnnouncements": {
         description: "Deprecated: corporate-action announcements over a date range.",

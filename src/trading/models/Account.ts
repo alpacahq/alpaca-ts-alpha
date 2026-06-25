@@ -73,6 +73,12 @@ export interface Account extends Record<string, unknown> {
      */
     createdAt?: Date;
     /**
+     * 
+     * @type {AccountStatus}
+     * @memberof Account
+     */
+    cryptoStatus?: AccountStatus;
+    /**
      * USD
      * 
      * @type {string}
@@ -315,6 +321,7 @@ export function AccountFromJSONTyped(json: any, ignoreDiscriminator: boolean): A
         'buyingPower': json['buying_power'] == null ? undefined : json['buying_power'],
         'cash': json['cash'] == null ? undefined : json['cash'],
         'createdAt': json['created_at'] == null ? undefined : (new Date(json['created_at'])),
+        'cryptoStatus': json['crypto_status'] == null ? undefined : AccountStatusFromJSON(json['crypto_status']),
         'currency': json['currency'] == null ? undefined : json['currency'],
         'daytradeCount': json['daytrade_count'] == null ? undefined : json['daytrade_count'],
         'daytradingBuyingPower': json['daytrading_buying_power'] == null ? undefined : json['daytrading_buying_power'],
@@ -365,6 +372,7 @@ export function AccountToJSONTyped(value?: Account | null, ignoreDiscriminator: 
         'buying_power': value['buyingPower'],
         'cash': value['cash'],
         'created_at': value['createdAt'] == null ? undefined : ((value['createdAt']).toISOString()),
+        'crypto_status': AccountStatusToJSON(value['cryptoStatus']),
         'currency': value['currency'],
         'daytrade_count': value['daytradeCount'],
         'daytrading_buying_power': value['daytradingBuyingPower'],

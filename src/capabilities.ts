@@ -121,8 +121,15 @@ export const capabilities: readonly CapabilityEntry[] = [
         accessor: "trading.calendar",
         api: "CalendarApi",
         group: "trading",
-        summary: "Market calendar and clock (open/close, sessions).",
-        methods: ["calendar", "clock", "legacyCalendar", "legacyClock"],
+        summary: "Market calendar (trading days, open/close sessions).",
+        methods: ["calendar", "legacyCalendar"],
+    },
+    {
+        accessor: "trading.clock",
+        api: "ClockApi",
+        group: "trading",
+        summary: "Market clock (current time, next open/close).",
+        methods: ["clock", "legacyClock"],
     },
     {
         accessor: "trading.corporateActions",
@@ -186,6 +193,13 @@ export const capabilities: readonly CapabilityEntry[] = [
         group: "trading",
         summary: "Server-sent event streams for account activity.",
         methods: ["subscribeToActivitiesSSE"],
+    },
+    {
+        accessor: "trading.locates",
+        api: "LocatesApi",
+        group: "trading",
+        summary: "Easy-to-borrow locate requests, listings and quotes.",
+        methods: ["createLocates", "getLocate", "listLocateQuotes", "listLocates"],
     },
     {
         accessor: "trading.orders",

@@ -120,12 +120,12 @@ const cases: EndpointCase[] = [
         call: (a) => a.trading.calendar.calendar({ market: 'us_equity' as any }),
     },
     {
-        accessor: 'trading.calendar',
+        accessor: 'trading.clock',
         method: 'clock',
         verb: 'GET',
         path: /^\/v3\/clock$/,
         kind: 'object',
-        call: (a) => a.trading.calendar.clock({}),
+        call: (a) => a.trading.clock.clock({}),
     },
     {
         accessor: 'trading.calendar',
@@ -136,12 +136,12 @@ const cases: EndpointCase[] = [
         call: (a) => a.trading.calendar.legacyCalendar({}),
     },
     {
-        accessor: 'trading.calendar',
+        accessor: 'trading.clock',
         method: 'legacyClock',
         verb: 'GET',
         path: /^\/v2\/clock$/,
         kind: 'object',
-        call: (a) => a.trading.calendar.legacyClock(),
+        call: (a) => a.trading.clock.legacyClock(),
     },
 
     // --- trading.corporateActions ---------------------------------------
@@ -335,6 +335,40 @@ const cases: EndpointCase[] = [
         path: /^\/v2beta1\/events\/activities$/,
         kind: 'array',
         call: (a) => a.trading.events.subscribeToActivitiesSSE({}),
+    },
+
+    // --- trading.locates -------------------------------------------------
+    {
+        accessor: 'trading.locates',
+        method: 'createLocates',
+        verb: 'POST',
+        path: /^\/v1\/locates$/,
+        kind: 'object',
+        call: (a) => a.trading.locates.createLocates({ createLocateRequest: { symbol: 'AAPL', qty: 100 } }),
+    },
+    {
+        accessor: 'trading.locates',
+        method: 'getLocate',
+        verb: 'GET',
+        path: /^\/v1\/locates\/[^/]+$/,
+        kind: 'object',
+        call: (a) => a.trading.locates.getLocate({ locateId: 'loc_123' }),
+    },
+    {
+        accessor: 'trading.locates',
+        method: 'listLocateQuotes',
+        verb: 'GET',
+        path: /^\/v1\/locates\/quotes$/,
+        kind: 'object',
+        call: (a) => a.trading.locates.listLocateQuotes({ symbols: 'AAPL' }),
+    },
+    {
+        accessor: 'trading.locates',
+        method: 'listLocates',
+        verb: 'GET',
+        path: /^\/v1\/locates$/,
+        kind: 'object',
+        call: (a) => a.trading.locates.listLocates({}),
     },
 
     // --- trading.orders --------------------------------------------------

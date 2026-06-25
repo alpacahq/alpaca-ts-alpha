@@ -743,19 +743,21 @@ paths, so every entry is individually anchor-linkable.
 ### Trading API
 
 <details>
-<summary><strong>Operations</strong> (64)</summary>
+<summary><strong>Operations</strong> (68)</summary>
 
 - `account` — [getAccount](#alpacatradingaccountgetaccount)
 - `accountActivities` — [getAccountActivities](#alpacatradingaccountactivitiesgetaccountactivities), [getAccountActivitiesByActivityType](#alpacatradingaccountactivitiesgetaccountactivitiesbyactivitytype)
 - `accountConfigurations` — [getAccountConfig](#alpacatradingaccountconfigurationsgetaccountconfig), [patchAccountConfig](#alpacatradingaccountconfigurationspatchaccountconfig)
 - `assets` — [getV2Assets](#alpacatradingassetsgetv2assets), [getV2AssetsSymbolOrAssetId](#alpacatradingassetsgetv2assetssymbolorassetid), [getOptionsContracts](#alpacatradingassetsgetoptionscontracts), [getOptionContractSymbolOrId](#alpacatradingassetsgetoptioncontractsymbolorid), [usCorporates](#alpacatradingassetsuscorporates), [usTreasuries](#alpacatradingassetsustreasuries)
-- `calendar` — [calendar](#alpacatradingcalendarcalendar), [clock](#alpacatradingcalendarclock), [legacyCalendar](#alpacatradingcalendarlegacycalendar), [legacyClock](#alpacatradingcalendarlegacyclock)
+- `calendar` — [calendar](#alpacatradingcalendarcalendar), [legacyCalendar](#alpacatradingcalendarlegacycalendar)
+- `clock` — [clock](#alpacatradingclockclock), [legacyClock](#alpacatradingclocklegacyclock)
 - `corporateActions` — [getV2CorporateActionsAnnouncements](#alpacatradingcorporateactionsgetv2corporateactionsannouncements), [getV2CorporateActionsAnnouncementsId](#alpacatradingcorporateactionsgetv2corporateactionsannouncementsid)
 - `cryptoFunding` — [createCryptoTransferForAccount](#alpacatradingcryptofundingcreatecryptotransferforaccount), [getCryptoFundingTransfer](#alpacatradingcryptofundinggetcryptofundingtransfer), [listCryptoFundingTransfers](#alpacatradingcryptofundinglistcryptofundingtransfers), [getCryptoTransferEstimate](#alpacatradingcryptofundinggetcryptotransferestimate), [listCryptoFundingWallets](#alpacatradingcryptofundinglistcryptofundingwallets), [createWhitelistedAddress](#alpacatradingcryptofundingcreatewhitelistedaddress), [deleteWhitelistedAddress](#alpacatradingcryptofundingdeletewhitelistedaddress), [listWhitelistedAddress](#alpacatradingcryptofundinglistwhitelistedaddress)
 - `cryptoPerpetualsAccountVitals` — [getCryptoPerpAccountVitals](#alpacatradingcryptoperpetualsaccountvitalsgetcryptoperpaccountvitals)
 - `cryptoPerpetualsFunding` — [createCryptoPerpTransferForAccount](#alpacatradingcryptoperpetualsfundingcreatecryptoperptransferforaccount), [getCryptoPerpFundingTransfer](#alpacatradingcryptoperpetualsfundinggetcryptoperpfundingtransfer), [getCryptoPerpTransferEstimate](#alpacatradingcryptoperpetualsfundinggetcryptoperptransferestimate), [listCryptoPerpFundingTransfers](#alpacatradingcryptoperpetualsfundinglistcryptoperpfundingtransfers), [listCryptoPerpFundingWallets](#alpacatradingcryptoperpetualsfundinglistcryptoperpfundingwallets), [createWhitelistedPerpAddress](#alpacatradingcryptoperpetualsfundingcreatewhitelistedperpaddress), [deleteWhitelistedPerpAddress](#alpacatradingcryptoperpetualsfundingdeletewhitelistedperpaddress), [listWhitelistedPerpAddress](#alpacatradingcryptoperpetualsfundinglistwhitelistedperpaddress)
 - `cryptoPerpetualsLeverage` — [getCryptoPerpAccountLeverage](#alpacatradingcryptoperpetualsleveragegetcryptoperpaccountleverage), [setCryptoPerpAccountLeverage](#alpacatradingcryptoperpetualsleveragesetcryptoperpaccountleverage)
 - `events` — [subscribeToActivitiesSSE](#alpacatradingeventssubscribetoactivitiessse)
+- `locates` — [createLocates](#alpacatradinglocatescreatelocates), [getLocate](#alpacatradinglocatesgetlocate), [listLocateQuotes](#alpacatradinglocateslistlocatequotes), [listLocates](#alpacatradinglocateslistlocates)
 - `orders` — [getAllOrders](#alpacatradingordersgetallorders), [postOrder](#alpacatradingorderspostorder), [getOrderByOrderID](#alpacatradingordersgetorderbyorderid), [getOrderByClientOrderId](#alpacatradingordersgetorderbyclientorderid), [patchOrderByOrderId](#alpacatradingorderspatchorderbyorderid), [deleteOrderByOrderID](#alpacatradingordersdeleteorderbyorderid), [deleteAllOrders](#alpacatradingordersdeleteallorders)
 - `portfolioHistory` — [getAccountPortfolioHistory](#alpacatradingportfoliohistorygetaccountportfoliohistory)
 - `positions` — [getAllOpenPositions](#alpacatradingpositionsgetallopenpositions), [getOpenPosition](#alpacatradingpositionsgetopenposition), [deleteAllOpenPositions](#alpacatradingpositionsdeleteallopenpositions), [deleteOpenPosition](#alpacatradingpositionsdeleteopenposition), [optionExercise](#alpacatradingpositionsoptionexercise), [optionDoNotExercise](#alpacatradingpositionsoptiondonotexercise)
@@ -887,7 +889,7 @@ await alpaca.trading.assets.usTreasuries({ cusips: "912797JL3" });
 
 #### `alpaca.trading.calendar` — CalendarApi
 
-Market calendar and clock (open/close, sessions).
+Market calendar (trading days, open/close sessions).
 
 ##### `alpaca.trading.calendar.calendar`
 
@@ -901,14 +903,6 @@ await alpaca.trading.calendar.calendar({
 });
 ```
 
-##### `alpaca.trading.calendar.clock`
-
-Current market clock: open/closed and next open/close.
-
-```ts
-await alpaca.trading.calendar.clock();
-```
-
 ##### `alpaca.trading.calendar.legacyCalendar`
 
 Legacy market-calendar endpoint (prefer `calendar`).
@@ -920,12 +914,24 @@ await alpaca.trading.calendar.legacyCalendar({
 });
 ```
 
-##### `alpaca.trading.calendar.legacyClock`
+#### `alpaca.trading.clock` — ClockApi
+
+Market clock (current time, next open/close).
+
+##### `alpaca.trading.clock.clock`
+
+Current market clock: open/closed and next open/close.
+
+```ts
+await alpaca.trading.clock.clock();
+```
+
+##### `alpaca.trading.clock.legacyClock`
 
 Legacy market-clock endpoint (prefer `clock`).
 
 ```ts
-await alpaca.trading.calendar.legacyClock();
+await alpaca.trading.clock.legacyClock();
 ```
 
 #### `alpaca.trading.corporateActions` — CorporateActionsApi
@@ -1174,6 +1180,44 @@ Server-sent event stream of account activities.
 await alpaca.trading.events.subscribeToActivitiesSSE({
   sinceId: "20240101000000000::...",
 });
+```
+
+#### `alpaca.trading.locates` — LocatesApi
+
+Easy-to-borrow locate requests, listings and quotes.
+
+##### `alpaca.trading.locates.createLocates`
+
+Create an easy-to-borrow locate request for a short sale.
+
+```ts
+await alpaca.trading.locates.createLocates({
+  createLocateRequest: { symbol: "AAPL", qty: 100 },
+});
+```
+
+##### `alpaca.trading.locates.getLocate`
+
+Fetch a single locate request by id.
+
+```ts
+await alpaca.trading.locates.getLocate({ locateId: "loc_123" });
+```
+
+##### `alpaca.trading.locates.listLocateQuotes`
+
+Locate availability and pricing for one or more symbols.
+
+```ts
+await alpaca.trading.locates.listLocateQuotes({ symbols: "AAPL,TSLA" });
+```
+
+##### `alpaca.trading.locates.listLocates`
+
+List locate requests, filtered by status, symbol or date range.
+
+```ts
+await alpaca.trading.locates.listLocates({ status: "active" });
 ```
 
 #### `alpaca.trading.orders` — OrdersApi

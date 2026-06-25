@@ -117,6 +117,12 @@ export interface Order extends Record<string, unknown> {
      */
     expiredAt?: Date | null;
     /**
+     * 
+     * @type {Date}
+     * @memberof Order
+     */
+    expiresAt?: Date;
+    /**
      * If true, eligible for execution outside regular trading hours.
      * @type {boolean}
      * @memberof Order
@@ -201,6 +207,12 @@ export interface Order extends Record<string, unknown> {
      * @memberof Order
      */
     qty?: string | null;
+    /**
+     * The proportional quantity of this leg in relation to the overall multi-leg order quantity.
+     * @type {string}
+     * @memberof Order
+     */
+    ratioQty?: string | null;
     /**
      * 
      * @type {Date}
@@ -310,6 +322,7 @@ export function OrderFromJSONTyped(json: any, ignoreDiscriminator: boolean): Ord
         'clientOrderId': json['client_order_id'] == null ? undefined : json['client_order_id'],
         'createdAt': json['created_at'] == null ? undefined : (new Date(json['created_at'])),
         'expiredAt': json['expired_at'] == null ? undefined : (new Date(json['expired_at'])),
+        'expiresAt': json['expires_at'] == null ? undefined : (new Date(json['expires_at'])),
         'extendedHours': json['extended_hours'] == null ? undefined : json['extended_hours'],
         'failedAt': json['failed_at'] == null ? undefined : (new Date(json['failed_at'])),
         'filledAt': json['filled_at'] == null ? undefined : (new Date(json['filled_at'])),
@@ -324,6 +337,7 @@ export function OrderFromJSONTyped(json: any, ignoreDiscriminator: boolean): Ord
         'orderType': json['order_type'] == null ? undefined : json['order_type'],
         'positionIntent': json['position_intent'] == null ? undefined : PositionIntentFromJSON(json['position_intent']),
         'qty': json['qty'] == null ? undefined : json['qty'],
+        'ratioQty': json['ratio_qty'] == null ? undefined : json['ratio_qty'],
         'replacedAt': json['replaced_at'] == null ? undefined : (new Date(json['replaced_at'])),
         'replacedBy': json['replaced_by'] == null ? undefined : json['replaced_by'],
         'replaces': json['replaces'] == null ? undefined : json['replaces'],
@@ -357,6 +371,7 @@ export function OrderToJSONTyped(value?: Order | null, ignoreDiscriminator: bool
         'client_order_id': value['clientOrderId'],
         'created_at': value['createdAt'] == null ? undefined : ((value['createdAt']).toISOString()),
         'expired_at': value['expiredAt'] === null ? null : ((value['expiredAt'] as any)?.toISOString()),
+        'expires_at': value['expiresAt'] == null ? undefined : ((value['expiresAt']).toISOString()),
         'extended_hours': value['extendedHours'],
         'failed_at': value['failedAt'] === null ? null : ((value['failedAt'] as any)?.toISOString()),
         'filled_at': value['filledAt'] === null ? null : ((value['filledAt'] as any)?.toISOString()),
@@ -371,6 +386,7 @@ export function OrderToJSONTyped(value?: Order | null, ignoreDiscriminator: bool
         'order_type': value['orderType'],
         'position_intent': PositionIntentToJSON(value['positionIntent']),
         'qty': value['qty'],
+        'ratio_qty': value['ratioQty'],
         'replaced_at': value['replacedAt'] === null ? null : ((value['replacedAt'] as any)?.toISOString()),
         'replaced_by': value['replacedBy'],
         'replaces': value['replaces'],

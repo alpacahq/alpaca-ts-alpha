@@ -37,7 +37,12 @@ found: `brew install openjdk`.
 2. **Fetch + diff** (skipped with `--offline`) — fetch the latest specs from
    `docs.alpaca.markets`, canonicalize them (`src/jsonCanonical.ts`), and show a
    semantic diff vs the pinned specs (`src/specDiff.ts`: schemas added/removed/
-   modified, operations added/removed).
+   modified, operations added/removed, plus **operations moved** (first tag
+   changed → different generated `Api` class) and **operations renamed**
+   (`operationId` changed → different generated method name). Moves/renames are
+   the early warning that the hand-written facade/capability map will need
+   rewiring — e.g. the clock retag surfaced as
+   `GET /v3/clock: "Calendar" -> "Clock"` before any code broke).
 3. **Confirm + adopt** — prompt before overwriting the pinned spec (auto-yes with
    `--yes`). Declining keeps the current baseline.
 4. **Derive** — apply the per-target JSON Patch overlay to the pinned spec

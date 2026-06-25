@@ -296,12 +296,14 @@ export class TradingClient {
     private _accountConfigurations?: trading.AccountConfigurationsApi;
     private _assets?: trading.AssetsApi;
     private _calendar?: trading.CalendarApi;
+    private _clock?: trading.ClockApi;
     private _corporateActions?: trading.CorporateActionsApi;
     private _cryptoFunding?: trading.CryptoFundingApi;
     private _cryptoPerpetualsAccountVitals?: trading.CryptoPerpetualsAccountVitalsBetaApi;
     private _cryptoPerpetualsFunding?: trading.CryptoPerpetualsFundingBetaApi;
     private _cryptoPerpetualsLeverage?: trading.CryptoPerpetualsLeverageBetaApi;
     private _events?: trading.EventsApi;
+    private _locates?: trading.LocatesApi;
     private _orders?: OrdersApi;
     private _portfolioHistory?: trading.PortfolioHistoryApi;
     private _positions?: trading.PositionsApi;
@@ -335,6 +337,9 @@ export class TradingClient {
     get calendar(): trading.CalendarApi {
         return (this._calendar ??= new trading.CalendarApi(this.config));
     }
+    get clock(): trading.ClockApi {
+        return (this._clock ??= new trading.ClockApi(this.config));
+    }
     get corporateActions(): trading.CorporateActionsApi {
         return (this._corporateActions ??= new trading.CorporateActionsApi(this.config));
     }
@@ -352,6 +357,9 @@ export class TradingClient {
     }
     get events(): trading.EventsApi {
         return (this._events ??= new trading.EventsApi(this.config));
+    }
+    get locates(): trading.LocatesApi {
+        return (this._locates ??= new trading.LocatesApi(this.config));
     }
     get orders(): OrdersApi {
         return (this._orders ??= new OrdersApi(this.config));

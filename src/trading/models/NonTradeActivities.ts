@@ -115,6 +115,12 @@ export interface NonTradeActivities {
      */
     createdAt?: Date;
     /**
+     * Currency denomination of the activity (e.g. USD). Included in NTA stream events and activity responses.
+     * @type {string}
+     * @memberof NonTradeActivities
+     */
+    currency?: string;
+    /**
      * The CUSIP of the security involved with the activity. Not present for all activity types.
      * @type {string}
      * @memberof NonTradeActivities
@@ -203,6 +209,7 @@ export function NonTradeActivitiesFromJSONTyped(json: any, ignoreDiscriminator: 
         'activitySubType': json['activity_sub_type'] == null ? undefined : json['activity_sub_type'],
         'activityType': json['activity_type'] == null ? undefined : ActivityTypeFromJSON(json['activity_type']),
         'createdAt': json['created_at'] == null ? undefined : (new Date(json['created_at'])),
+        'currency': json['currency'] == null ? undefined : json['currency'],
         'cusip': json['cusip'] == null ? undefined : json['cusip'],
         'date': json['date'] == null ? undefined : (new Date(json['date'])),
         'groupId': json['group_id'] == null ? undefined : json['group_id'],
@@ -229,6 +236,7 @@ export function NonTradeActivitiesToJSONTyped(value?: NonTradeActivities | null,
         'activity_sub_type': value['activitySubType'],
         'activity_type': ActivityTypeToJSON(value['activityType']),
         'created_at': value['createdAt'] == null ? undefined : ((value['createdAt']).toISOString()),
+        'currency': value['currency'],
         'cusip': value['cusip'],
         'date': value['date'] == null ? undefined : ((value['date']).toISOString()),
         'group_id': value['groupId'],

@@ -35,13 +35,20 @@
  * @export
  */
 export const AccountStatus = {
+    Inactive: 'INACTIVE',
+    PaperOnly: 'PAPER_ONLY',
     Onboarding: 'ONBOARDING',
     SubmissionFailed: 'SUBMISSION_FAILED',
     Submitted: 'SUBMITTED',
     AccountUpdated: 'ACCOUNT_UPDATED',
     ApprovalPending: 'APPROVAL_PENDING',
     Active: 'ACTIVE',
-    Rejected: 'REJECTED'
+    Rejected: 'REJECTED',
+    AccountClosed: 'ACCOUNT_CLOSED',
+    Approved: 'APPROVED',
+    AccountClosedPending: 'ACCOUNT_CLOSED_PENDING',
+    ActionRequired: 'ACTION_REQUIRED',
+    Limited: 'LIMITED'
 } as const;
 export type AccountStatus = typeof AccountStatus[keyof typeof AccountStatus];
 

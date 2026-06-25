@@ -13,6 +13,13 @@
  */
 
 import { mapValues } from '../runtime';
+import type { USDPositionValues } from './USDPositionValues';
+import {
+    USDPositionValuesFromJSON,
+    USDPositionValuesFromJSONTyped,
+    USDPositionValuesToJSON,
+    USDPositionValuesToJSONTyped,
+} from './USDPositionValues';
 import type { ExchangeForPosition } from './ExchangeForPosition';
 import {
     ExchangeForPositionFromJSON,
@@ -59,6 +66,12 @@ export interface Position {
      */
     avgEntryPrice: string;
     /**
+     * The weighted-average exchange rate at the time the position was entered.
+     * @type {string}
+     * @memberof Position
+     */
+    avgEntrySwapRate?: string;
+    /**
      * Percent change from last day price (by a factor of 1)
      * @type {string}
      * @memberof Position
@@ -95,6 +108,12 @@ export interface Position {
      */
     marketValue: string;
     /**
+     * The exchange rate as of the previous close (i.e. yesterday's rate)
+     * @type {string}
+     * @memberof Position
+     */
+    prevSwapRate?: string;
+    /**
      * The number of shares
      * @type {string}
      * @memberof Position
@@ -111,7 +130,13 @@ export interface Position {
      * @type {string}
      * @memberof Position
      */
-    side: string;
+    side: PositionSideEnum;
+    /**
+     * The current exchange rate (without mark-up) used to convert local-currency position values into USD. Present only for LCT (Local Currency Trading) accounts
+     * @type {string}
+     * @memberof Position
+     */
+    swapRate?: string;
     /**
      * Symbol name of the asset
      * @type {string}
@@ -142,8 +167,23 @@ export interface Position {
      * @memberof Position
      */
     unrealizedPlpc: string;
+    /**
+     * 
+     * @type {USDPositionValues}
+     * @memberof Position
+     */
+    usd?: USDPositionValues;
 }
 
+
+/**
+ * @export
+ */
+export const PositionSideEnum = {
+    Long: 'long',
+    Short: 'short'
+} as const;
+export type PositionSideEnum = typeof PositionSideEnum[keyof typeof PositionSideEnum];
 
 
 /**
@@ -184,20 +224,24 @@ export function PositionFromJSONTyped(json: any, ignoreDiscriminator: boolean): 
         'assetId': json['asset_id'],
         'assetMarginable': json['asset_marginable'],
         'avgEntryPrice': json['avg_entry_price'],
+        'avgEntrySwapRate': json['avg_entry_swap_rate'] == null ? undefined : json['avg_entry_swap_rate'],
         'changeToday': json['change_today'],
         'costBasis': json['cost_basis'],
         'currentPrice': json['current_price'],
         'exchange': ExchangeForPositionFromJSON(json['exchange']),
         'lastdayPrice': json['lastday_price'],
         'marketValue': json['market_value'],
+        'prevSwapRate': json['prev_swap_rate'] == null ? undefined : json['prev_swap_rate'],
         'qty': json['qty'],
         'qtyAvailable': json['qty_available'] == null ? undefined : json['qty_available'],
         'side': json['side'],
+        'swapRate': json['swap_rate'] == null ? undefined : json['swap_rate'],
         'symbol': json['symbol'],
         'unrealizedIntradayPl': json['unrealized_intraday_pl'],
         'unrealizedIntradayPlpc': json['unrealized_intraday_plpc'],
         'unrealizedPl': json['unrealized_pl'],
         'unrealizedPlpc': json['unrealized_plpc'],
+        'usd': json['usd'] == null ? undefined : USDPositionValuesFromJSON(json['usd']),
     };
 }
 
@@ -216,20 +260,24 @@ export function PositionToJSONTyped(value?: Position | null, ignoreDiscriminator
         'asset_id': value['assetId'],
         'asset_marginable': value['assetMarginable'],
         'avg_entry_price': value['avgEntryPrice'],
+        'avg_entry_swap_rate': value['avgEntrySwapRate'],
         'change_today': value['changeToday'],
         'cost_basis': value['costBasis'],
         'current_price': value['currentPrice'],
         'exchange': ExchangeForPositionToJSON(value['exchange']),
         'lastday_price': value['lastdayPrice'],
         'market_value': value['marketValue'],
+        'prev_swap_rate': value['prevSwapRate'],
         'qty': value['qty'],
         'qty_available': value['qtyAvailable'],
         'side': value['side'],
+        'swap_rate': value['swapRate'],
         'symbol': value['symbol'],
         'unrealized_intraday_pl': value['unrealizedIntradayPl'],
         'unrealized_intraday_plpc': value['unrealizedIntradayPlpc'],
         'unrealized_pl': value['unrealizedPl'],
         'unrealized_plpc': value['unrealizedPlpc'],
+        'usd': USDPositionValuesToJSON(value['usd']),
     };
 }
 

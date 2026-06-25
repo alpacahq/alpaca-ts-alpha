@@ -3,12 +3,14 @@ apis/AccountConfigurationsApi.ts
 apis/AccountsApi.ts
 apis/AssetsApi.ts
 apis/CalendarApi.ts
+apis/ClockApi.ts
 apis/CorporateActionsApi.ts
 apis/CryptoFundingApi.ts
 apis/CryptoPerpetualsAccountVitalsBetaApi.ts
 apis/CryptoPerpetualsFundingBetaApi.ts
 apis/CryptoPerpetualsLeverageBetaApi.ts
 apis/EventsApi.ts
+apis/LocatesApi.ts
 apis/OrdersApi.ts
 apis/PortfolioHistoryApi.ts
 apis/PositionsApi.ts
@@ -56,6 +58,7 @@ models/CommonVOFSubtypeActivityV2.ts
 models/CouponFrequency.ts
 models/CouponType.ts
 models/CreateCryptoTransferRequest.ts
+models/CreateLocateRequest.ts
 models/CreateWhitelistedAddressRequest.ts
 models/CreateWhitelistedPerpAddressRequest.ts
 models/CryptoTransfer.ts
@@ -64,6 +67,7 @@ models/CryptoWallet.ts
 models/DIVNRAActivityV2.ts
 models/DIVSPDActivityV2.ts
 models/DayCount.ts
+models/ErrorResponse.ts
 models/Exchange.ts
 models/ExchangeForPosition.ts
 models/ExchangeOfferActivityV2.ts
@@ -83,6 +87,12 @@ models/JNLCActivityV2.ts
 models/JNLSActivityV2.ts
 models/LegacyCalendarDay.ts
 models/LegacyClock.ts
+models/ListLocateQuotesResponse.ts
+models/ListLocatesResponse.ts
+models/Locate.ts
+models/LocateError.ts
+models/LocateQuote.ts
+models/LocateQuoteError.ts
 models/MAActivityV2.ts
 models/MLegOrderLeg.ts
 models/Market.ts
@@ -138,6 +148,7 @@ models/TokenizationRequestType.ts
 models/TradingActivities.ts
 models/TransferDirection.ts
 models/TreasurySubtype.ts
+models/USDPositionValues.ts
 models/UnitSplitActivityV2.ts
 models/UpdateWatchlistRequest.ts
 models/UsCorporate.ts
@@ -145,6 +156,7 @@ models/UsCorporatesResp.ts
 models/UsTreasuriesResp.ts
 models/UsTreasury.ts
 models/WRMActivityV2.ts
+models/WalletFeeEstimateResponse.ts
 models/WarrantExerciseElectionActivityV2.ts
 models/Watchlist.ts
 models/WatchlistWithoutAsset.ts

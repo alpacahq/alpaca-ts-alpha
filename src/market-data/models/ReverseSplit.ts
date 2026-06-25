@@ -61,6 +61,15 @@ export interface ReverseSplit {
      */
     newRate: number;
     /**
+     * The post-split ticker. Empty when the reverse split does not change the
+     * ticker (the most common case); only populated when the issuer assigns a
+     * different symbol after the split.
+     * 
+     * @type {string}
+     * @memberof ReverseSplit
+     */
+    newSymbol?: string;
+    /**
      * 
      * @type {string}
      * @memberof ReverseSplit
@@ -137,6 +146,7 @@ export function ReverseSplitFromJSONTyped(json: any, ignoreDiscriminator: boolea
         'newCusip': json['new_cusip'],
         'newIsin': json['new_isin'] == null ? undefined : json['new_isin'],
         'newRate': json['new_rate'],
+        'newSymbol': json['new_symbol'] == null ? undefined : json['new_symbol'],
         'oldCusip': json['old_cusip'],
         'oldIsin': json['old_isin'] == null ? undefined : json['old_isin'],
         'oldRate': json['old_rate'],
@@ -164,6 +174,7 @@ export function ReverseSplitToJSONTyped(value?: ReverseSplit | null, ignoreDiscr
         'new_cusip': value['newCusip'],
         'new_isin': value['newIsin'],
         'new_rate': value['newRate'],
+        'new_symbol': value['newSymbol'],
         'old_cusip': value['oldCusip'],
         'old_isin': value['oldIsin'],
         'old_rate': value['oldRate'],
