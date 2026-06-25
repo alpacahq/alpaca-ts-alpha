@@ -38,6 +38,7 @@ import type {
     PostOrderRequestStopLoss,
     MLegOrderLeg,
     AdvancedInstructions,
+    InitOverrideFunction,
 } from "./trading";
 
 /**
@@ -67,6 +68,39 @@ export function toAmountString(value: Amount, field: string = "amount"): string 
         return trimmed;
     }
     throw new Error(`Order ${field} must be a number or string, got ${typeof value}.`);
+}
+
+/**
+ * Per-submission options for the ergonomic order methods (headers/transport
+ * concerns that aren't part of the order body).
+ */
+export interface OrderSubmitOptions {
+    /**
+     * `Idempotency-Key` for this POST. Replaying the same key with the same
+     * parameters within Alpaca's 24h window returns the original response
+     * instead of creating a duplicate order, which makes a `POST` safe to retry
+     * yourself (the transport never auto-retries non-idempotent methods). Reusing
+     * a key with *different* parameters is rejected by the server.
+     */
+    idempotencyKey?: string;
+}
+
+/**
+ * Build the `initOverrides` for an order submission from
+ * {@link OrderSubmitOptions}. Returns `undefined` when there is nothing to add
+ * (so the generated method keeps its defaults). Merges onto the existing headers
+ * (preserving auth) rather than replacing them.
+ */
+export function orderInitOverrides(
+    options?: OrderSubmitOptions,
+): InitOverrideFunction | undefined {
+    const key = options?.idempotencyKey;
+    if (!key) {
+        return undefined;
+    }
+    return async ({ init }) => ({
+        headers: { ...(init.headers as Record<string, string>), "Idempotency-Key": key },
+    });
 }
 
 /** Fields shared by every order kind. `timeInForce` defaults to `"day"`. */

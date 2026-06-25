@@ -89,6 +89,19 @@ describe('G04 pagination helpers', () => {
         expect(fetches).toBe(2); // stopped after the page that satisfied the cap
     });
 
+    it('stops on a repeated next token instead of looping forever', async () => {
+        let fetches = 0;
+        // A misbehaving endpoint that always echoes the same token.
+        const all = await collect<number>(async (token) => {
+            fetches += 1;
+            return { items: token === 'loop' ? [99] : [1], nextPageToken: 'loop' };
+        }, { maxItems: 100 });
+        // First page (token undefined) -> [1] with next 'loop'; second page
+        // (token 'loop') -> [99] with next 'loop' === current -> STOP.
+        expect(all).toEqual([1, 99]);
+        expect(fetches).toBe(2);
+    });
+
     it('collectCursor() honors maxItems', async () => {
         let fetches = 0;
         const byToken: Record<string, Array<{ id: string; n: number }>> = {
@@ -275,6 +288,21 @@ describe('cursor pagination', () => {
             pageSize: 2,
         });
         expect(out.map((i) => i.n)).toEqual([1, 2, 3]);
+        expect(fetches).toBe(2);
+    });
+
+    it('stops when the cursor repeats (same last id) instead of looping', async () => {
+        let fetches = 0;
+        const out = await collectCursor<Item>({
+            fetchPage: () => {
+                fetches += 1;
+                // Always a full-looking page whose last id never advances.
+                return Promise.resolve([{ id: 'stuck', n: fetches }]);
+            },
+            getCursor: (last) => last.id,
+        });
+        // First page sets cursor 'stuck'; second page's cursor 'stuck' === current -> STOP.
+        expect(out.map((i) => i.n)).toEqual([1, 2]);
         expect(fetches).toBe(2);
     });
 

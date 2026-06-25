@@ -212,15 +212,19 @@ const alpaca = new Alpaca({
   keyId,
   secret,
 
-  // Abort a stalled request after N ms (default: no timeout).
+  // Abort a stalled request after N ms (default: 30000; set 0 to disable).
   timeoutMs: 10_000,
 
-  // Opt-in automatic retry. Disabled unless maxRetries > 0.
+  // Use the market-data sandbox host (default false; market data only).
+  sandbox: false,
+
+  // Automatic retry. The Alpaca client enables this by default (3 attempts);
+  // pass a config to tune it or `retry: false` to disable.
   retry: {
-    maxRetries: 3,
-    retryDelayMs: 500,        // base for exponential backoff (default 500)
-    maxDelayMs: 30_000,       // cap per delay (default 30000)
-    retryableStatuses: [429, 500, 502, 503, 504], // default
+    maxRetries: 2,            // 1 initial + 2 retries = 3 attempts (default)
+    retryDelayMs: 250,        // base for exponential backoff (default 250)
+    maxDelayMs: 5_000,        // cap per delay (default 5000)
+    retryableStatuses: [408, 425, 429, 500, 502, 503, 504], // default
     respectRetryAfter: true,  // honor a Retry-After header (default true)
   },
 
@@ -234,22 +238,43 @@ const alpaca = new Alpaca({
 
 ### Retry semantics
 
-- Off unless `retry.maxRetries > 0`.
-- `429` is always retried; the `retryableStatuses` (5xx by default) are retried
-  **only for idempotent verbs** (`GET/HEAD/PUT/DELETE/OPTIONS`), so a
-  non-idempotent `POST` is never silently re-sent.
+- **On by default on the `Alpaca` client** (3 attempts = 1 initial + 2 retries);
+  pass a `retry` config to tune it or `retry: false` to disable. Raw `Api`
+  classes built from a bare `Configuration` are **off** unless you set `retry`
+  (same opt-in model as the rate limiter).
+- The `retryableStatuses` (`408, 425, 429, 500, 502, 503, 504` by default) are
+  retried **only for safe/idempotent verbs** (`GET/HEAD/OPTIONS/TRACE`). A
+  non-idempotent `POST`/`PUT`/`PATCH`/`DELETE` is **never** auto-retried (even on
+  `429`), so an order can't be silently duplicated — pass an `Idempotency-Key`
+  to make a `POST` safely retryable yourself (see below).
 - **Transient network failures** (DNS, connection reset, TLS — surfaced as a
-  `FetchError`) are also retried, again **only for idempotent verbs**. A
+  `FetchError`) are also retried, again **only for the safe verbs**. A
   deliberate abort (caller `AbortSignal` or the `timeoutMs` deadline) is *not*
   retried.
-- A `Retry-After` header (seconds or HTTP-date) is honored when present;
-  otherwise exponential backoff with jitter, capped at `maxDelayMs`.
+- Backoff is exponential (doubling per attempt) from `retryDelayMs` (250ms) up
+  to `maxDelayMs` (5s), with `±20%` jitter. A `Retry-After` header (seconds or
+  HTTP-date) is honored over the computed delay when present.
+
+### Idempotency keys
+
+The ergonomic order methods accept an `idempotencyKey` that is sent as the
+`Idempotency-Key` header. Replaying the same key with the same parameters within
+Alpaca's 24h window returns the original response instead of creating a duplicate
+order, which makes the `POST` safe for you to retry:
+
+```ts
+await alpaca.trading.orders.market(
+  { symbol: "AAPL", qty: 1, side: "buy" },
+  { idempotencyKey: "client-generated-uuid" },
+);
+```
 
 ### Timeouts
 
-`timeoutMs` wires an `AbortController` into the underlying `fetch`. A per-call
-`AbortSignal` (passed via `initOverrides`) still works and composes with the
-timeout — whichever aborts first wins.
+`timeoutMs` wires an `AbortController` into the underlying `fetch` and defaults to
+`30000` (30s); pass `0` to disable the deadline. A per-call `AbortSignal` (passed
+via `initOverrides`) still works and composes with the timeout — whichever aborts
+first wins.
 
 ### Rate limiting
 

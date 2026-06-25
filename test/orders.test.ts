@@ -214,6 +214,49 @@ function capturingFetch() {
     return { calls, fetchApi: fetchApi as unknown as trading.FetchAPI };
 }
 
+describe('Alpaca client default retry policy', () => {
+    /** A fetch that fails the first `failures` GET calls with `status`, then 200s. */
+    function flakyGetFetch(failures: number, status: number) {
+        let calls = 0;
+        const fetchApi = (async () => {
+            calls += 1;
+            if (calls <= failures) {
+                return new Response(JSON.stringify({ message: 'try later' }), {
+                    status,
+                    headers: { 'Content-Type': 'application/json' },
+                });
+            }
+            return new Response(JSON.stringify({ id: 'acct-1' }), {
+                status: 200,
+                headers: { 'Content-Type': 'application/json' },
+            });
+        }) as unknown as trading.FetchAPI;
+        return { fetchApi, getCalls: () => calls };
+    }
+
+    it('retries a transient 503 GET by default (3 attempts) without any retry config', async () => {
+        const { fetchApi, getCalls } = flakyGetFetch(2, 503);
+        const alpaca = new Alpaca({ ...CREDS, fetchApi, rateLimit: false, retry: { retryDelayMs: 1 } });
+        const acct = await alpaca.trading.account.getAccount();
+        expect(acct).toMatchObject({ id: 'acct-1' });
+        expect(getCalls()).toBe(3); // 1 initial + 2 retries
+    });
+
+    it('disables retries when retry: false', async () => {
+        const { fetchApi, getCalls } = flakyGetFetch(2, 503);
+        const alpaca = new Alpaca({ ...CREDS, fetchApi, rateLimit: false, retry: false });
+        await expect(alpaca.trading.account.getAccount()).rejects.toBeInstanceOf(trading.ApiError);
+        expect(getCalls()).toBe(1);
+    });
+
+    it('caps the default policy at 3 attempts (1 initial + 2 retries)', async () => {
+        const { fetchApi, getCalls } = flakyGetFetch(99, 503);
+        const alpaca = new Alpaca({ ...CREDS, fetchApi, rateLimit: false, retry: { retryDelayMs: 1 } });
+        await expect(alpaca.trading.account.getAccount()).rejects.toBeInstanceOf(trading.ApiError);
+        expect(getCalls()).toBe(3);
+    });
+});
+
 describe('alpaca.trading.orders helper methods', () => {
     it('exposes the enhanced OrdersApi (instanceof generated OrdersApi)', () => {
         const alpaca = new Alpaca({ ...CREDS });
@@ -267,6 +310,44 @@ describe('alpaca.trading.orders helper methods', () => {
         const alpaca = new Alpaca({ ...CREDS, fetchApi, rateLimit: false });
         const order = await alpaca.trading.orders.limit({ symbol: 'AAPL', qty: 1, side: 'buy', limitPrice: 150 });
         expect(order.status).toBe('accepted');
+    });
+
+    it('sends an Idempotency-Key header (preserving auth headers) when provided', async () => {
+        let seen: RequestInit | undefined;
+        const fetchApi = (async (_url: string | URL | Request, init?: RequestInit) => {
+            seen = init;
+            return new Response(JSON.stringify({ id: 'order-1', status: 'accepted' }), {
+                status: 200,
+                headers: { 'Content-Type': 'application/json' },
+            });
+        }) as unknown as trading.FetchAPI;
+        const alpaca = new Alpaca({ ...CREDS, fetchApi, rateLimit: false });
+        await alpaca.trading.orders.market(
+            { symbol: 'AAPL', qty: 1, side: 'buy' },
+            { idempotencyKey: 'abc-123' },
+        );
+
+        const headers = seen?.headers as Record<string, string>;
+        expect(headers['Idempotency-Key']).toBe('abc-123');
+        // The idempotency override must merge, not clobber the auth headers.
+        expect(headers['APCA-API-KEY-ID']).toBe('AKTEST');
+        expect(headers['APCA-API-SECRET-KEY']).toBe('sekret');
+    });
+
+    it('omits the Idempotency-Key header when no key is given', async () => {
+        let seen: RequestInit | undefined;
+        const fetchApi = (async (_url: string | URL | Request, init?: RequestInit) => {
+            seen = init;
+            return new Response(JSON.stringify({ id: 'order-1', status: 'accepted' }), {
+                status: 200,
+                headers: { 'Content-Type': 'application/json' },
+            });
+        }) as unknown as trading.FetchAPI;
+        const alpaca = new Alpaca({ ...CREDS, fetchApi, rateLimit: false });
+        await alpaca.trading.orders.market({ symbol: 'AAPL', qty: 1, side: 'buy' });
+
+        const headers = seen?.headers as Record<string, string>;
+        expect(headers['Idempotency-Key']).toBeUndefined();
     });
 
     it('getAllOrders() joins a symbols[] and passes a typed side', async () => {
