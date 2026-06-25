@@ -81,6 +81,41 @@ and tests). It needs a real JDK (auto-detected; `brew install openjdk` if
 missing). See `tooling/GENERATION.md` for the pipeline, durability mechanisms,
 and how to adopt upstream spec changes.
 
+## Releases & changelog (Changesets)
+
+Releases and `CHANGELOG.md` are managed with [Changesets](https://github.com/changesets/changesets).
+Changelog entries are **human-authored**, decoupled from commit messages — every
+user-facing change ships with a changeset file describing it and its semver bump.
+
+```bash
+npm run changeset          # add a changeset: pick patch/minor/major + write the summary
+npm run changeset:version  # consume changesets -> bump version + update CHANGELOG.md
+npm run release            # build, then `changeset publish` (npm publish + git tag)
+```
+
+Workflow:
+
+1. **Per change**: run `npm run changeset`, choose the bump (patch/minor/major), and
+   write a one-line, user-facing summary. Commit the generated `.changeset/*.md`
+   file alongside the code change. Internal-only changes (CI, tooling, refactors
+   with no consumer impact) need no changeset.
+2. **At release time**: run `npm run changeset:version`. This applies all pending
+   changesets, bumps `version` in `package.json`, regenerates `CHANGELOG.md` with
+   GitHub PR/commit links (via `@changesets/changelog-github`), and deletes the
+   consumed changeset files. Review and commit the result.
+3. **Publish**: run `npm run release` to build and publish to npm, then push the
+   commit and the tag (`git push --follow-tags`).
+
+Notes:
+
+- `@changesets/changelog-github` (configured in `.changeset/config.json`) needs a
+  `GITHUB_TOKEN` env var when running `changeset:version` so it can resolve
+  PR/commit/author links — e.g. `GITHUB_TOKEN=… npm run changeset:version`.
+- `access` is `public` in `.changeset/config.json` (the package is scoped
+  `@alpacahq/*`).
+- The existing `v0.1.0`–`v0.2.0` releases predate this setup and are intentionally
+  **not** backfilled; the changelog starts from the next release.
+
 ## Assisted regeneration (agent helping a human run `npm run generate`)
 
 The pipeline is interactive and has a few human-judgment gates. When assisting,
