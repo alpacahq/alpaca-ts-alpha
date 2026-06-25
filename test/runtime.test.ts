@@ -161,19 +161,37 @@ for (const { name, rt } of RUNTIMES) {
             expect(calls).toBe(1);
         });
 
-        it('DOES retry a POST on 429 (rate limit is always retryable)', async () => {
+        // Idempotency safety: a non-idempotent POST is never auto-retried, even on
+        // 429. Retrying could duplicate an order; use an Idempotency-Key to make a
+        // POST safely retryable yourself.
+        it('does NOT retry a non-idempotent POST on 429', async () => {
             let calls = 0;
             const cfg = new rt.Configuration({
                 retry: { maxRetries: 3, retryDelayMs: 1 },
                 fetchApi: async () => {
                     calls += 1;
-                    if (calls === 1) return jsonResponse(429, { message: 'slow down' });
-                    return jsonResponse(200, OK_BODY);
+                    return jsonResponse(429, { message: 'slow down' });
                 },
             });
-            const res = await call(cfg, 'POST');
-            expect(res.status).toBe(200);
-            expect(calls).toBe(2);
+            await expect(call(cfg, 'POST')).rejects.toBeInstanceOf(rt.ApiError);
+            expect(calls).toBe(1);
+        });
+
+        it('retries the newly-added 408 and 425 statuses on an idempotent GET', async () => {
+            for (const status of [408, 425]) {
+                let calls = 0;
+                const cfg = new rt.Configuration({
+                    retry: { maxRetries: 3, retryDelayMs: 1 },
+                    fetchApi: async () => {
+                        calls += 1;
+                        if (calls === 1) return jsonResponse(status, { message: 'retry me' });
+                        return jsonResponse(200, OK_BODY);
+                    },
+                });
+                const res = await call(cfg, 'GET');
+                expect(res.status).toBe(200);
+                expect(calls).toBe(2);
+            }
         });
 
         it('honors Retry-After (seconds) over the configured base delay', async () => {
@@ -380,6 +398,55 @@ for (const { name, rt } of RUNTIMES) {
             }
         });
 
+        it('applies the default 30s timeout when none is configured', async () => {
+            vi.useFakeTimers();
+            try {
+                const cfg = new rt.Configuration({
+                    fetchApi: (_url, init) =>
+                        new Promise<Response>((_resolve, reject) => {
+                            init?.signal?.addEventListener('abort', () =>
+                                reject((init.signal as AbortSignal).reason ?? new Error('aborted')),
+                            );
+                        }),
+                });
+                const p = call(cfg, 'GET');
+                const expectation = expect(p).rejects.toMatchObject({
+                    name: 'FetchError',
+                    cause: { name: 'TimeoutError' },
+                });
+                await vi.advanceTimersByTimeAsync(30_000);
+                await expectation;
+            } finally {
+                vi.useRealTimers();
+            }
+        });
+
+        it('disables the deadline entirely when timeoutMs is 0', async () => {
+            vi.useFakeTimers();
+            try {
+                let settled = false;
+                const cfg = new rt.Configuration({
+                    timeoutMs: 0,
+                    fetchApi: (_url, init) =>
+                        new Promise<Response>((resolve, reject) => {
+                            init?.signal?.addEventListener('abort', () => reject(new Error('aborted')));
+                            // Resolve far in the future; with no deadline it must not abort.
+                            setTimeout(() => {
+                                settled = true;
+                                resolve(jsonResponse(200, OK_BODY));
+                            }, 120_000);
+                        }),
+                });
+                const p = call(cfg, 'GET');
+                await vi.advanceTimersByTimeAsync(60_000);
+                expect(settled).toBe(false); // still waiting, not aborted
+                await vi.advanceTimersByTimeAsync(60_000);
+                await expect(p).resolves.toHaveProperty('status', 200);
+            } finally {
+                vi.useRealTimers();
+            }
+        });
+
         it('respects a caller-supplied AbortSignal that is already aborted', async () => {
             const ac = new AbortController();
             ac.abort(new Error('caller cancelled'));
@@ -441,6 +508,16 @@ describe('paper/live environment switching', () => {
     it('ignores the paper flag for market data (single host)', () => {
         expect(new marketData.Configuration({ paper: false }).basePath).toBe(marketData.MARKET_DATA_HOST);
         expect(new marketData.Configuration({ paper: true }).basePath).toBe(marketData.MARKET_DATA_HOST);
+    });
+
+    it('selects the market-data sandbox host when sandbox is true', () => {
+        expect(marketData.MARKET_DATA_SANDBOX_HOST).toBe('https://data.sandbox.alpaca.markets');
+        expect(new marketData.Configuration({ sandbox: true }).basePath).toBe(marketData.MARKET_DATA_SANDBOX_HOST);
+        expect(new marketData.Configuration({ sandbox: false }).basePath).toBe(marketData.MARKET_DATA_HOST);
+    });
+
+    it('ignores the sandbox flag for trading (no sandbox host)', () => {
+        expect(new trading.Configuration({ sandbox: true }).basePath).toBe(trading.TRADING_PAPER_HOST);
     });
 });
 

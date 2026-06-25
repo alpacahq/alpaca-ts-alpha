@@ -40,13 +40,28 @@ export type { RateLimitInfo } from "../errors";
 export const USER_AGENT = "@alpacahq/alpaca-ts-alpha/0.0.0";
 
 /**
+ * Default per-request timeout in ms, applied when `timeoutMs` is not configured.
+ * Mirrors the cross-SDK read/write timeout so a hung socket can't stall a call
+ * forever. Pass `timeoutMs: 0` to disable the deadline entirely.
+ */
+export const DEFAULT_TIMEOUT_MS = 30_000;
+
+/**
  * Opt-in automatic retry policy. Disabled unless `maxRetries > 0`.
+ *
+ * The defaults (when enabled) follow Alpaca's cross-SDK retry policy: base
+ * backoff `250ms`, max backoff `5s`, exponential doubling per attempt with
+ * `±20%` jitter, and the retryable status set `408, 425, 429, 500, 502, 503,
+ * 504`. Only the safe/idempotent methods (`GET`, `HEAD`, `OPTIONS`, `TRACE`) and
+ * transient network failures are retried; a non-idempotent `POST`/`PATCH`/etc.
+ * is never auto-retried (use an `Idempotency-Key` to make a POST safely
+ * retryable yourself).
  */
 export interface RetryConfig {
     maxRetries?: number; // max retry attempts after the initial request (default 0 = off)
-    retryDelayMs?: number; // base backoff in ms for exponential backoff (default 500)
-    maxDelayMs?: number; // cap for any single backoff delay in ms (default 30000)
-    retryableStatuses?: number[]; // HTTP statuses eligible for retry (default 429,500,502,503,504)
+    retryDelayMs?: number; // base backoff in ms for exponential backoff (default 250)
+    maxDelayMs?: number; // cap for any single backoff delay in ms (default 5000)
+    retryableStatuses?: number[]; // HTTP statuses eligible for retry (default 408,425,429,500,502,503,504)
     respectRetryAfter?: boolean; // honor a Retry-After response header (default true)
 }
 
@@ -64,10 +79,11 @@ export interface ConfigurationParameters {
     accessToken?: string | Promise<string> | ((name?: string, scopes?: string[]) => string | Promise<string>); // parameter for oauth2 security
     headers?: HTTPHeaders; //header params we want to use on every request
     credentials?: RequestCredentials; //value for the credentials param we want to use on each request
-    timeoutMs?: number; // per-request timeout in ms; aborts the fetch via AbortController when exceeded
+    timeoutMs?: number; // per-request timeout in ms; aborts the fetch via AbortController when exceeded (default 30000; set 0 to disable)
     retry?: RetryConfig; // opt-in automatic retry/backoff policy
     rateLimit?: RateLimitConfig; // opt-in proactive client-side rate limiting (off unless set)
     userAgent?: string; // override the default User-Agent header (set to "" to disable)
+    sandbox?: boolean; // select the sandbox host; honored only by hosts that distinguish it (e.g. market data), ignored if basePath is set explicitly
 }
 
 /**
@@ -170,7 +186,9 @@ export class BaseConfiguration {
     }
 
     get timeoutMs(): number | undefined {
-        return this.configuration.timeoutMs;
+        // Apply the cross-SDK default deadline when unset; an explicit `0`
+        // (or negative) disables the timeout, matching `applyTimeout`.
+        return this.configuration.timeoutMs ?? DEFAULT_TIMEOUT_MS;
     }
 
     get retry(): RetryConfig | undefined {
@@ -256,7 +274,11 @@ export class BaseAPI {
         const retry = this.configuration.retry;
         const maxRetries = retry?.maxRetries ?? 0;
         const method = (init.method || context.method || 'GET').toUpperCase();
-        const idempotent = method === 'GET' || method === 'HEAD' || method === 'PUT' || method === 'DELETE' || method === 'OPTIONS';
+        // Only the safe/idempotent methods are auto-retried. A non-idempotent
+        // POST/PATCH/etc. is never replayed (even on 429) because a request that
+        // reached the server could have already mutated state; use an
+        // `Idempotency-Key` to make a POST safely retryable yourself.
+        const retryable = RETRYABLE_METHODS.has(method);
 
         let attempt = 0;
         while (true) {
@@ -280,7 +302,7 @@ export class BaseAPI {
             }
             if (networkError !== undefined) {
                 const canRetry = attempt < maxRetries
-                    && idempotent
+                    && retryable
                     && isRetryableNetworkError(networkError);
                 if (canRetry) {
                     await sleep(backoffDelay(attempt, retry));
@@ -293,8 +315,8 @@ export class BaseAPI {
                 return response;
             }
             const canRetry = attempt < maxRetries
-                && isRetryableStatus(response!.status, retry)
-                && (idempotent || response!.status === 429);
+                && retryable
+                && isRetryableStatus(response!.status, retry);
             if (canRetry) {
                 await sleep(computeRetryDelay(response!, attempt, retry));
                 attempt++;
@@ -477,7 +499,15 @@ function applyTimeout(timeoutMs: number | undefined, existing?: AbortSignal | nu
     };
 }
 
-const DEFAULT_RETRYABLE_STATUSES = [429, 500, 502, 503, 504];
+const DEFAULT_RETRYABLE_STATUSES = [408, 425, 429, 500, 502, 503, 504];
+
+/** HTTP methods eligible for automatic retry (safe/idempotent only). */
+const RETRYABLE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS', 'TRACE']);
+
+/** Default base backoff (ms) for the first retry. */
+const DEFAULT_RETRY_DELAY_MS = 250;
+/** Default cap (ms) for any single backoff delay. */
+const DEFAULT_MAX_DELAY_MS = 5_000;
 
 function isRetryableStatus(status: number, retry?: RetryConfig): boolean {
     const statuses = retry?.retryableStatuses ?? DEFAULT_RETRYABLE_STATUSES;
@@ -498,16 +528,22 @@ function isRetryableNetworkError(error: unknown): boolean {
     return name !== 'AbortError' && name !== 'TimeoutError';
 }
 
-/** Exponential backoff with jitter, capped at `maxDelayMs`. */
+/**
+ * Exponential backoff (doubling per attempt) with `±20%` jitter, capped at
+ * `maxDelayMs`. Jitter is symmetric (randomized between `0.8x` and `1.2x`) and
+ * the result is capped after jitter so it never exceeds the configured max.
+ */
 function backoffDelay(attempt: number, retry?: RetryConfig): number {
-    const base = retry?.retryDelayMs ?? 500;
-    const cap = retry?.maxDelayMs ?? 30000;
+    const base = retry?.retryDelayMs ?? DEFAULT_RETRY_DELAY_MS;
+    const cap = retry?.maxDelayMs ?? DEFAULT_MAX_DELAY_MS;
     const backoff = Math.min(base * 2 ** attempt, cap);
-    return backoff + Math.random() * backoff * 0.2;
+    // 0.8x..1.2x jitter band.
+    const jittered = backoff * (0.8 + Math.random() * 0.4);
+    return Math.min(jittered, cap);
 }
 
 function computeRetryDelay(response: Response, attempt: number, retry?: RetryConfig): number {
-    const cap = retry?.maxDelayMs ?? 30000;
+    const cap = retry?.maxDelayMs ?? DEFAULT_MAX_DELAY_MS;
     if ((retry?.respectRetryAfter ?? true) && response.headers) {
         const retryAfter = response.headers.get('Retry-After');
         if (retryAfter) {

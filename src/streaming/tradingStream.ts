@@ -72,8 +72,9 @@ export class TradingStream extends AlpacaWebSocket {
                 if (frame.data?.status === "authorized") {
                     this.onAuthenticated();
                 } else {
-                    this.emit(EVENT.CLIENT_ERROR, "auth failed");
-                    this.disconnect();
+                    // Terminal: surface the error and stop (no reconnect with
+                    // rejected credentials).
+                    this.failAuthentication("auth failed");
                 }
                 break;
             case "listening":

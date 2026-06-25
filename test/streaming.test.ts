@@ -184,6 +184,7 @@ describe('StockDataStream (market data)', () => {
             credentials: CREDS,
             pingIntervalMs: 0,
             backoff: false,
+            reconnectJitter: 0,
             wsFactory: () => {
                 const s = new FakeSocket();
                 sockets.push(s);
@@ -194,7 +195,7 @@ describe('StockDataStream (market data)', () => {
         stream.connect();
         authenticateMd(sockets[0]);
 
-        // Drop the connection; reconnect is scheduled.
+        // Drop the connection; reconnect is scheduled at the initial 1s delay.
         sockets[0].emitEvent('close');
         vi.advanceTimersByTime(1000);
         expect(sockets).toHaveLength(2);
@@ -255,6 +256,19 @@ describe('CryptoDataStream / NewsStream URLs', () => {
         new streaming.NewsStream({ credentials: CREDS, pingIntervalMs: 0, wsFactory: factory }).connect();
         expect(urls[0]).toBe('wss://stream.data.alpaca.markets/v1beta3/crypto/us');
         expect(urls[1]).toBe('wss://stream.data.alpaca.markets/v1beta1/news');
+    });
+
+    it('uses the market-data sandbox host when sandbox is set', () => {
+        const urls: string[] = [];
+        const factory = (url: string) => {
+            urls.push(url);
+            return new FakeSocket();
+        };
+        expect(streaming.MARKET_DATA_STREAM_SANDBOX_HOST).toBe('wss://stream.data.sandbox.alpaca.markets');
+        new streaming.StockDataStream({ credentials: CREDS, feed: 'iex', sandbox: true, pingIntervalMs: 0, wsFactory: factory }).connect();
+        new streaming.CryptoDataStream({ credentials: CREDS, sandbox: true, pingIntervalMs: 0, wsFactory: factory }).connect();
+        expect(urls[0]).toBe('wss://stream.data.sandbox.alpaca.markets/v2/iex');
+        expect(urls[1]).toBe('wss://stream.data.sandbox.alpaca.markets/v1beta3/crypto/us');
     });
 });
 
@@ -428,29 +442,74 @@ describe('base lifecycle & transport', () => {
         expect(sockets).toHaveLength(1);
     });
 
-    it('grows the reconnect backoff delay between attempts', () => {
+    it('grows the reconnect backoff delay exponentially between attempts', () => {
         vi.useFakeTimers();
         const sockets: FakeSocket[] = [];
         const stream = new streaming.StockDataStream({
             credentials: CREDS,
             pingIntervalMs: 0,
             backoff: true,
-            backoffIncrement: 0.5,
+            reconnectJitter: 0,
             wsFactory: trackingFactory(sockets),
         });
         stream.connect();
 
-        // First drop: scheduled with a 0s delay.
+        // First drop: scheduled with the initial 1s delay.
         sockets[0].emitEvent('close');
+        vi.advanceTimersByTime(999);
+        expect(sockets).toHaveLength(1);
         vi.advanceTimersByTime(1);
         expect(sockets).toHaveLength(2);
 
-        // Second drop: delay grew to ~0.5s.
+        // Second drop: delay doubled to 2s.
         sockets[1].emitEvent('close');
-        vi.advanceTimersByTime(499);
+        vi.advanceTimersByTime(1999);
         expect(sockets).toHaveLength(2);
         vi.advanceTimersByTime(1);
         expect(sockets).toHaveLength(3);
+    });
+
+    it('stops reconnecting after maxReconnectAttempts is reached', () => {
+        vi.useFakeTimers();
+        const sockets: FakeSocket[] = [];
+        const stream = new streaming.StockDataStream({
+            credentials: CREDS,
+            pingIntervalMs: 0,
+            backoff: false,
+            reconnectJitter: 0,
+            maxReconnectAttempts: 2,
+            wsFactory: trackingFactory(sockets),
+        });
+        stream.connect();
+
+        // Two reconnects are allowed, then it gives up.
+        for (let i = 0; i < 5; i++) {
+            sockets[sockets.length - 1].emitEvent('close');
+            vi.advanceTimersByTime(1000);
+        }
+        // initial socket + 2 reconnect attempts = 3 total.
+        expect(sockets).toHaveLength(3);
+    });
+
+    it('treats a market-data auth failure as terminal (no reconnect)', () => {
+        vi.useFakeTimers();
+        const sockets: FakeSocket[] = [];
+        const stream = new streaming.StockDataStream({
+            credentials: CREDS,
+            pingIntervalMs: 0,
+            reconnectJitter: 0,
+            wsFactory: trackingFactory(sockets),
+        });
+        const errors: string[] = [];
+        stream.onError((e) => errors.push(e));
+        stream.connect();
+        sockets[0].emitEvent('open');
+        // 402 = auth failed -> terminal.
+        sockets[0].emitEvent('message', mpEncode([{ T: 'error', code: 402, msg: 'auth failed' }]));
+
+        expect(errors).toContain('auth failed');
+        vi.advanceTimersByTime(60_000);
+        expect(sockets).toHaveLength(1); // never reconnected
     });
 
     it('is idempotent: a second connect() while connected is a no-op', () => {
@@ -786,6 +845,7 @@ describe('TradingStream lifecycle', () => {
             credentials: CREDS,
             pingIntervalMs: 0,
             backoff: false,
+            reconnectJitter: 0,
             wsFactory: trackingFactory(sockets),
         });
         stream.subscribeTradeUpdates();

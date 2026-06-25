@@ -87,10 +87,22 @@ export interface AlpacaClientOptions {
      * (`data.alpaca.markets`) regardless of this flag.
      */
     paper?: boolean;
-    /** Per-request timeout in ms; aborts the fetch when exceeded. */
+    /**
+     * Use the market-data **sandbox** host (`data.sandbox.alpaca.markets` and
+     * `stream.data.sandbox.alpaca.markets`). Defaults to `false`. Affects only
+     * market data; the trading host is selected by {@link paper}.
+     */
+    sandbox?: boolean;
+    /** Per-request timeout in ms; aborts the fetch when exceeded. Defaults to 30s; pass `0` to disable. */
     timeoutMs?: number;
-    /** Opt-in automatic retry/backoff policy. */
-    retry?: trading.RetryConfig;
+    /**
+     * Automatic retry/backoff policy. The facade enables a safe default
+     * (3 attempts = 1 initial + 2 retries, exponential `250ms`..`5s` backoff with
+     * `±20%` jitter, on the safe/idempotent verbs only) so transient `5xx`/`429`/
+     * network blips recover transparently. Pass a {@link trading.RetryConfig} to
+     * tune it, or `false` to disable retries entirely.
+     */
+    retry?: trading.RetryConfig | false;
     /**
      * Proactive client-side rate limiting. The facade enables a safe default
      * (~200 requests/minute, applied independently to the trading and
@@ -117,6 +129,7 @@ type SharedRestConfig = Pick<
     | "keyId"
     | "secret"
     | "accessToken"
+    | "sandbox"
     | "timeoutMs"
     | "retry"
     | "rateLimit"
@@ -138,6 +151,18 @@ export const DEFAULT_RATE_LIMIT: trading.RateLimitConfig = {
     intervalMs: 60_000,
 };
 
+/**
+ * Safe default retry policy applied by the facade when the caller doesn't opt
+ * out. `maxRetries: 2` yields 3 attempts (1 initial + 2 retries) per the SDK
+ * spec; the remaining knobs (250ms..5s exponential backoff, ±20% jitter, the
+ * retryable status set, safe-verbs-only gating) come from the transport
+ * defaults. Pass `retry: false` to disable, or a partial config to override
+ * individual fields.
+ */
+export const DEFAULT_RETRY: trading.RetryConfig = {
+    maxRetries: 2,
+};
+
 function sharedRestConfig(options: AlpacaClientOptions, creds: ResolvedCredentials): SharedRestConfig {
     return {
         // Resolved (env-fallback + OAuth precedence): exactly one scheme is set,
@@ -145,8 +170,11 @@ function sharedRestConfig(options: AlpacaClientOptions, creds: ResolvedCredentia
         keyId: creds.keyId,
         secret: creds.secret,
         accessToken: creds.accessToken,
+        sandbox: options.sandbox,
         timeoutMs: options.timeoutMs,
-        retry: options.retry,
+        // Default-on (3 attempts), but `retry: false` opts out and an explicit
+        // (possibly partial) config overrides individual fields.
+        retry: options.retry === false ? undefined : { ...DEFAULT_RETRY, ...options.retry },
         // Default-on, but `rateLimit: false` opts out and an explicit config tunes it.
         rateLimit: options.rateLimit === false ? undefined : options.rateLimit ?? DEFAULT_RATE_LIMIT,
         userAgent: options.userAgent,
@@ -190,44 +218,46 @@ export type GetAllOrdersInput = Omit<trading.GetAllOrdersRequest, "side" | "symb
 
 export class OrdersApi extends trading.OrdersApi {
     /** Place a market order (requires `qty` or `notional`). */
-    market(input: orders.MarketOrderInput): Promise<trading.Order> {
-        return this.postOrder({ postOrderRequest: orders.buildMarketOrder(input) });
+    market(input: orders.MarketOrderInput, options?: orders.OrderSubmitOptions): Promise<trading.Order> {
+        return this.postOrder({ postOrderRequest: orders.buildMarketOrder(input) }, orders.orderInitOverrides(options));
     }
     /** Place a limit order. */
-    limit(input: orders.LimitOrderInput): Promise<trading.Order> {
-        return this.postOrder({ postOrderRequest: orders.buildLimitOrder(input) });
+    limit(input: orders.LimitOrderInput, options?: orders.OrderSubmitOptions): Promise<trading.Order> {
+        return this.postOrder({ postOrderRequest: orders.buildLimitOrder(input) }, orders.orderInitOverrides(options));
     }
     /** Place a stop (stop-market) order. */
-    stop(input: orders.StopOrderInput): Promise<trading.Order> {
-        return this.postOrder({ postOrderRequest: orders.buildStopOrder(input) });
+    stop(input: orders.StopOrderInput, options?: orders.OrderSubmitOptions): Promise<trading.Order> {
+        return this.postOrder({ postOrderRequest: orders.buildStopOrder(input) }, orders.orderInitOverrides(options));
     }
     /** Place a stop-limit order. */
-    stopLimit(input: orders.StopLimitOrderInput): Promise<trading.Order> {
-        return this.postOrder({ postOrderRequest: orders.buildStopLimitOrder(input) });
+    stopLimit(input: orders.StopLimitOrderInput, options?: orders.OrderSubmitOptions): Promise<trading.Order> {
+        return this.postOrder({ postOrderRequest: orders.buildStopLimitOrder(input) }, orders.orderInitOverrides(options));
     }
     /** Place a trailing-stop order (requires `trailPrice` or `trailPercent`). */
-    trailingStop(input: orders.TrailingStopOrderInput): Promise<trading.Order> {
-        return this.postOrder({ postOrderRequest: orders.buildTrailingStopOrder(input) });
+    trailingStop(input: orders.TrailingStopOrderInput, options?: orders.OrderSubmitOptions): Promise<trading.Order> {
+        return this.postOrder({ postOrderRequest: orders.buildTrailingStopOrder(input) }, orders.orderInitOverrides(options));
     }
     /** Place a bracket order (entry + take-profit + stop-loss). */
-    bracket(input: orders.BracketOrderInput): Promise<trading.Order> {
-        return this.postOrder({ postOrderRequest: orders.buildBracketOrder(input) });
+    bracket(input: orders.BracketOrderInput, options?: orders.OrderSubmitOptions): Promise<trading.Order> {
+        return this.postOrder({ postOrderRequest: orders.buildBracketOrder(input) }, orders.orderInitOverrides(options));
     }
     /** Place a one-cancels-other (OCO) order. */
-    oco(input: orders.OcoOrderInput): Promise<trading.Order> {
-        return this.postOrder({ postOrderRequest: orders.buildOcoOrder(input) });
+    oco(input: orders.OcoOrderInput, options?: orders.OrderSubmitOptions): Promise<trading.Order> {
+        return this.postOrder({ postOrderRequest: orders.buildOcoOrder(input) }, orders.orderInitOverrides(options));
     }
     /** Place a one-triggers-other (OTO) order. */
-    oto(input: orders.OtoOrderInput): Promise<trading.Order> {
-        return this.postOrder({ postOrderRequest: orders.buildOtoOrder(input) });
+    oto(input: orders.OtoOrderInput, options?: orders.OrderSubmitOptions): Promise<trading.Order> {
+        return this.postOrder({ postOrderRequest: orders.buildOtoOrder(input) }, orders.orderInitOverrides(options));
     }
     /**
      * Generic escape hatch: submit a near-raw order, normalizing amount fields
      * to wire strings. Use the typed methods above when possible; reach for this
-     * only for shapes they don't cover (e.g. `mleg`).
+     * only for shapes they don't cover (e.g. `mleg`). Pass
+     * {@link orders.OrderSubmitOptions.idempotencyKey} to make the POST safely
+     * retryable.
      */
-    submit(input: orders.OrderInput): Promise<trading.Order> {
-        return this.postOrder({ postOrderRequest: orders.buildOrder(input) });
+    submit(input: orders.OrderInput, options?: orders.OrderSubmitOptions): Promise<trading.Order> {
+        return this.postOrder({ postOrderRequest: orders.buildOrder(input) }, orders.orderInitOverrides(options));
     }
 
     /**
@@ -670,6 +700,7 @@ function collectSymbolMap<T>(
 export class MarketDataClient {
     private readonly config: marketData.Configuration;
     private readonly credentials: AlpacaCredentials;
+    private readonly sandbox: boolean;
 
     private _stocks?: marketData.StockApi;
     private _crypto?: marketData.CryptoApi;
@@ -688,6 +719,7 @@ export class MarketDataClient {
         // Streaming authenticates with a key/secret pair; OAuth-only clients
         // resolve to empty values here and cannot open streams.
         this.credentials = { keyId: creds.keyId ?? "", secret: creds.secret ?? "" };
+        this.sandbox = options.sandbox ?? false;
         this.config = new marketData.Configuration(sharedRestConfig(options, creds));
     }
 
@@ -729,28 +761,28 @@ export class MarketDataClient {
     stockStream(
         options: Omit<streaming.StockDataStreamOptions, "credentials"> = {},
     ): streaming.StockDataStream {
-        return new (getStreaming().StockDataStream)({ ...options, credentials: this.credentials });
+        return new (getStreaming().StockDataStream)({ sandbox: this.sandbox, ...options, credentials: this.credentials });
     }
 
     /** Open a real-time crypto data stream. */
     cryptoStream(
         options: Omit<streaming.CryptoDataStreamOptions, "credentials"> = {},
     ): streaming.CryptoDataStream {
-        return new (getStreaming().CryptoDataStream)({ ...options, credentials: this.credentials });
+        return new (getStreaming().CryptoDataStream)({ sandbox: this.sandbox, ...options, credentials: this.credentials });
     }
 
     /** Open a real-time options data stream. */
     optionStream(
         options: Omit<streaming.OptionDataStreamOptions, "credentials"> = {},
     ): streaming.OptionDataStream {
-        return new (getStreaming().OptionDataStream)({ ...options, credentials: this.credentials });
+        return new (getStreaming().OptionDataStream)({ sandbox: this.sandbox, ...options, credentials: this.credentials });
     }
 
     /** Open a real-time news stream. */
     newsStream(
         options: Omit<streaming.MarketDataStreamOptions, "credentials"> = {},
     ): streaming.NewsStream {
-        return new (getStreaming().NewsStream)({ ...options, credentials: this.credentials });
+        return new (getStreaming().NewsStream)({ sandbox: this.sandbox, ...options, credentials: this.credentials });
     }
 
     // --- Workflow helpers --------------------------------------------------

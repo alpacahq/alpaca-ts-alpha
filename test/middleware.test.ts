@@ -44,6 +44,7 @@ describe('metricsMiddleware', () => {
         const alpaca = new Alpaca({
             ...CREDS,
             rateLimit: false,
+            retry: false, // observe a single failed attempt, not the default retries
             fetchApi: fetchThrowing(new Error('boom')),
             middleware: [metricsMiddleware({ onRequest: (m) => metrics.push(m) })],
         });
@@ -97,6 +98,7 @@ describe('loggingMiddleware', () => {
         const alpaca = new Alpaca({
             ...CREDS,
             rateLimit: false,
+            retry: false, // observe a single failed attempt, not the default retries
             fetchApi: fetchThrowing(new Error('kaboom')),
             middleware: [loggingMiddleware({ logger })],
         });

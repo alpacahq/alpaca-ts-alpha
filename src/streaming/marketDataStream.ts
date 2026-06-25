@@ -33,6 +33,15 @@ import {
 } from "./types";
 
 export const MARKET_DATA_STREAM_HOST = "wss://stream.data.alpaca.markets";
+export const MARKET_DATA_STREAM_SANDBOX_HOST = "wss://stream.data.sandbox.alpaca.markets";
+
+/** Numeric codes Alpaca returns for terminal authentication failures. */
+const AUTH_FAILURE_CODES = new Set<number>([401, 402, 404]);
+
+/** Pick the market-data stream host for the selected environment. */
+function streamHost(sandbox?: boolean): string {
+    return sandbox ? MARKET_DATA_STREAM_SANDBOX_HOST : MARKET_DATA_STREAM_HOST;
+}
 
 /** Subscribable market-data channels. */
 export type MarketDataChannel =
@@ -59,7 +68,10 @@ const CHANNELS: MarketDataChannel[] = [
 ];
 
 /** Options for a market-data subclass (endpoint URL is derived). */
-export type MarketDataStreamOptions = Omit<AlpacaWebSocketOptions, "url" | "codec">;
+export type MarketDataStreamOptions = Omit<AlpacaWebSocketOptions, "url" | "codec"> & {
+    /** Use the market-data sandbox host instead of production. Default false. */
+    sandbox?: boolean;
+};
 
 interface ControlOrDataFrame {
     T?: string;
@@ -221,13 +233,19 @@ export class MarketDataStream extends AlpacaWebSocket {
                     this.updateSubscriptions(frame);
                     this.emit(EVENT.SUBSCRIPTION, this.getSubscriptions());
                     break;
-                case "error":
-                    this.emit(
-                        EVENT.CLIENT_ERROR,
+                case "error": {
+                    const message =
                         (frame.code != null && CONN_ERROR.get(frame.code)) ||
-                            String(frame.msg ?? "stream error"),
-                    );
+                        String(frame.msg ?? "stream error");
+                    // Auth failures are terminal: don't reconnect with credentials
+                    // the server already rejected.
+                    if (frame.code != null && AUTH_FAILURE_CODES.has(frame.code)) {
+                        this.failAuthentication(message);
+                    } else {
+                        this.emit(EVENT.CLIENT_ERROR, message);
+                    }
                     break;
+                }
                 default:
                     this.dispatchData(frame);
             }
@@ -319,8 +337,8 @@ export interface StockDataStreamOptions extends MarketDataStreamOptions {
 
 export class StockDataStream extends MarketDataStream {
     constructor(options: StockDataStreamOptions) {
-        const { feed = "iex", ...rest } = options;
-        super({ ...rest, url: `${MARKET_DATA_STREAM_HOST}/v2/${feed}` });
+        const { feed = "iex", sandbox, ...rest } = options;
+        super({ ...rest, url: `${streamHost(sandbox)}/v2/${feed}` });
     }
 }
 
@@ -331,8 +349,8 @@ export interface CryptoDataStreamOptions extends MarketDataStreamOptions {
 
 export class CryptoDataStream extends MarketDataStream {
     constructor(options: CryptoDataStreamOptions) {
-        const { loc = "us", ...rest } = options;
-        super({ ...rest, url: `${MARKET_DATA_STREAM_HOST}/v1beta3/crypto/${loc}` });
+        const { loc = "us", sandbox, ...rest } = options;
+        super({ ...rest, url: `${streamHost(sandbox)}/v1beta3/crypto/${loc}` });
     }
 }
 
@@ -346,13 +364,14 @@ export interface OptionDataStreamOptions extends MarketDataStreamOptions {
 
 export class OptionDataStream extends MarketDataStream {
     constructor(options: OptionDataStreamOptions) {
-        const { feed = "indicative", ...rest } = options;
-        super({ ...rest, url: `${MARKET_DATA_STREAM_HOST}/v1beta1/${feed}` });
+        const { feed = "indicative", sandbox, ...rest } = options;
+        super({ ...rest, url: `${streamHost(sandbox)}/v1beta1/${feed}` });
     }
 }
 
 export class NewsStream extends MarketDataStream {
     constructor(options: MarketDataStreamOptions) {
-        super({ ...options, url: `${MARKET_DATA_STREAM_HOST}/v1beta1/news` });
+        const { sandbox, ...rest } = options;
+        super({ ...rest, url: `${streamHost(sandbox)}/v1beta1/news` });
     }
 }
