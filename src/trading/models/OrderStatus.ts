@@ -86,7 +86,8 @@ export const OrderStatus = {
     Stopped: 'stopped',
     Rejected: 'rejected',
     Suspended: 'suspended',
-    Calculated: 'calculated'
+    Calculated: 'calculated',
+    Held: 'held'
 } as const;
 export type OrderStatus = typeof OrderStatus[keyof typeof OrderStatus];
 

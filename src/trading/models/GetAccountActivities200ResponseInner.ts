@@ -204,6 +204,12 @@ export interface GetAccountActivities200ResponseInner extends Record<string, unk
      */
     createdAt?: Date;
     /**
+     * Currency denomination of the activity (e.g. USD). Included in NTA stream events and activity responses.
+     * @type {string}
+     * @memberof GetAccountActivities200ResponseInner
+     */
+    currency?: string;
+    /**
      * The CUSIP of the security involved with the activity. Not present for all activity types.
      * @type {string}
      * @memberof GetAccountActivities200ResponseInner
@@ -294,6 +300,7 @@ export function GetAccountActivities200ResponseInnerFromJSONTyped(json: any, ign
         'type': json['type'] == null ? undefined : json['type'],
         'activitySubType': json['activity_sub_type'] == null ? undefined : json['activity_sub_type'],
         'createdAt': json['created_at'] == null ? undefined : (new Date(json['created_at'])),
+        'currency': json['currency'] == null ? undefined : json['currency'],
         'cusip': json['cusip'] == null ? undefined : json['cusip'],
         'date': json['date'] == null ? undefined : (new Date(json['date'])),
         'groupId': json['group_id'] == null ? undefined : json['group_id'],
@@ -328,6 +335,7 @@ export function GetAccountActivities200ResponseInnerToJSONTyped(value?: GetAccou
         'type': value['type'],
         'activity_sub_type': value['activitySubType'],
         'created_at': value['createdAt'] == null ? undefined : ((value['createdAt']).toISOString()),
+        'currency': value['currency'],
         'cusip': value['cusip'],
         'date': value['date'] == null ? undefined : ((value['date']).toISOString()),
         'group_id': value['groupId'],

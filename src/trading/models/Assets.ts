@@ -124,11 +124,29 @@ export interface Assets {
      */
     marginable: boolean;
     /**
+     * Minimum order size. Field available for crypto only.
+     * @type {string}
+     * @memberof Assets
+     */
+    minOrderSize?: string;
+    /**
+     * Amount a trade quantity can be incremented by. Field available for crypto only.
+     * @type {string}
+     * @memberof Assets
+     */
+    minTradeIncrement?: string;
+    /**
      * The official name of the asset
      * @type {string}
      * @memberof Assets
      */
     name: string;
+    /**
+     * Amount the price can be incremented by. Field available for crypto only.
+     * @type {string}
+     * @memberof Assets
+     */
+    priceIncrement?: string;
     /**
      * Asset is shortable or not
      * @type {boolean}
@@ -230,7 +248,10 @@ export function AssetsFromJSONTyped(json: any, ignoreDiscriminator: boolean): As
         'marginRequirementLong': json['margin_requirement_long'] == null ? undefined : json['margin_requirement_long'],
         'marginRequirementShort': json['margin_requirement_short'] == null ? undefined : json['margin_requirement_short'],
         'marginable': json['marginable'],
+        'minOrderSize': json['min_order_size'] == null ? undefined : json['min_order_size'],
+        'minTradeIncrement': json['min_trade_increment'] == null ? undefined : json['min_trade_increment'],
         'name': json['name'],
+        'priceIncrement': json['price_increment'] == null ? undefined : json['price_increment'],
         'shortable': json['shortable'],
         'status': json['status'],
         'symbol': json['symbol'],
@@ -261,7 +282,10 @@ export function AssetsToJSONTyped(value?: Assets | null, ignoreDiscriminator: bo
         'margin_requirement_long': value['marginRequirementLong'],
         'margin_requirement_short': value['marginRequirementShort'],
         'marginable': value['marginable'],
+        'min_order_size': value['minOrderSize'],
+        'min_trade_increment': value['minTradeIncrement'],
         'name': value['name'],
+        'price_increment': value['priceIncrement'],
         'shortable': value['shortable'],
         'status': value['status'],
         'symbol': value['symbol'],

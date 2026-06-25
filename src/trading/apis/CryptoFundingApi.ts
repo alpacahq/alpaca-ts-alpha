@@ -19,7 +19,7 @@ import type {
   CreateWhitelistedAddressRequest,
   CryptoTransfer,
   CryptoWallet,
-  GetCryptoPerpTransferEstimate200Response,
+  WalletFeeEstimateResponse,
   WhitelistedAddress,
 } from '../models/index';
 import {
@@ -31,8 +31,8 @@ import {
     CryptoTransferToJSON,
     CryptoWalletFromJSON,
     CryptoWalletToJSON,
-    GetCryptoPerpTransferEstimate200ResponseFromJSON,
-    GetCryptoPerpTransferEstimate200ResponseToJSON,
+    WalletFeeEstimateResponseFromJSON,
+    WalletFeeEstimateResponseToJSON,
     WhitelistedAddressFromJSON,
     WhitelistedAddressToJSON,
 } from '../models/index';
@@ -266,7 +266,7 @@ export class CryptoFundingApi extends runtime.BaseAPI {
      * Returns the estimated on-chain network (gas) fee for a proposed crypto withdrawal at current chain conditions. Pass the `asset`, `from_address`, `to_address`, and `amount` you intend to send; the response reports the network fee that would be charged for the corresponding transaction.
      * Returns the estimated gas fee for a proposed transaction.
      */
-    async getCryptoTransferEstimateRaw(requestParameters: GetCryptoTransferEstimateRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<GetCryptoPerpTransferEstimate200Response>> {
+    async getCryptoTransferEstimateRaw(requestParameters: GetCryptoTransferEstimateRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<WalletFeeEstimateResponse>> {
         const queryParameters: any = {};
 
         if (requestParameters['asset'] != null) {
@@ -305,14 +305,14 @@ export class CryptoFundingApi extends runtime.BaseAPI {
             query: queryParameters,
         }, initOverrides);
 
-        return new runtime.JSONApiResponse(response, (jsonValue) => GetCryptoPerpTransferEstimate200ResponseFromJSON(jsonValue));
+        return new runtime.JSONApiResponse(response, (jsonValue) => WalletFeeEstimateResponseFromJSON(jsonValue));
     }
 
     /**
      * Returns the estimated on-chain network (gas) fee for a proposed crypto withdrawal at current chain conditions. Pass the `asset`, `from_address`, `to_address`, and `amount` you intend to send; the response reports the network fee that would be charged for the corresponding transaction.
      * Returns the estimated gas fee for a proposed transaction.
      */
-    async getCryptoTransferEstimate(requestParameters: GetCryptoTransferEstimateRequest = {}, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<GetCryptoPerpTransferEstimate200Response> {
+    async getCryptoTransferEstimate(requestParameters: GetCryptoTransferEstimateRequest = {}, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<WalletFeeEstimateResponse> {
         const response = await this.getCryptoTransferEstimateRaw(requestParameters, initOverrides);
         return await response.value();
     }

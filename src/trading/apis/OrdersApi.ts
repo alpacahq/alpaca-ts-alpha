@@ -473,6 +473,13 @@ export const GetAllOrdersAssetClassEnum = {
     UsEquity: 'us_equity',
     UsOption: 'us_option',
     Crypto: 'crypto',
+    CryptoPerp: 'crypto_perp',
+    Treasury: 'treasury',
+    Corporate: 'corporate',
+    GlobalEquity: 'global_equity',
+    UsIndex: 'us_index',
+    UsEquityChain: 'us_equity_chain',
+    Ipo: 'ipo',
     All: 'all'
 } as const;
 export type GetAllOrdersAssetClassEnum = typeof GetAllOrdersAssetClassEnum[keyof typeof GetAllOrdersAssetClassEnum];
